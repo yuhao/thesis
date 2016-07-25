@@ -1,4 +1,4 @@
-%!TEX root=paper.tex
+%!TEX root=../paper.tex
 
 \chapter{The Need for High-Performance and Energy-Efficient Computation in Mobile Web}
 \label{sec:motivation}
@@ -26,27 +26,17 @@ Holding the CPU performance at its peak, \Fig{fig:network_bottleneck} shows the 
 \paragraph{Computation Impact} As the network latency becomes low (e.g., under the LTE technology), the CPU performance starts playing a significant role in the mobile Web performance. To study how the CPU performance affects the webpage load time, we mimic a wide range of CPU performance capabilities by leveraging S5's 14 frequency settings. Note that we use frequency only as a \textit{proxy} for CPU performance, it is \emph{not} our intention to study the impact of a particular CPU's frequency itself.~\Fig{fig:cpu_bottleneck} shows how webpage load time changes with CPU performance under a 100~ms RTT (LTE-like cellular network connectivity). As the CPU frequency decreases from the highest to the lowest by about 6X (2.5 GHz to 0.4 GHz), the webpage load time slows down by as much as 4.5X from 4~seconds to about 18~seconds, indicating strong sensitivity to CPU performance.
 
 \begin{figure}[t]
-\centering
-  \begin{minipage}[b]{0.47\columnwidth}
-    \centering
-    \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{network_bottleneck}
-    \caption{Webpage load time with respect to changing network latency. Each
-marker corresponds to an RTT value. We also superimpose the round-trip time
-(RTT) range for different cellular technologies derived from both technical
-specifications as well as real measurements in the field~\cite{HPBN,
-carrier_measure}.}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{network_bottleneck}
+  \caption{Webpage load time with respect to changing network latency. Each marker corresponds to an RTT value. We also superimpose the round-trip time (RTT) range for different cellular technologies derived from both technical specifications as well as real measurements in the field~\cite{HPBN, carrier_measure}.}
   \label{fig:network_bottleneck}
-  \end{minipage}
-  \hspace*{15pt}
-  \begin{minipage}[b]{0.47\columnwidth}
-    \centering
-    \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{cpu_bottleneck}
-    \caption{Webpage load time with respect to CPU frequency on a Galaxy S5
-smartphone. The markers represent CPU frequencies, which range from 0.4~GHz
-(left) to 2.5~GHz (right). We also overlay the load time on a desktop CPU (the
-dotted line) for comparison purpose.}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{cpu_bottleneck}
+  \caption{Webpage load time with respect to CPU frequency on a Galaxy S5 smartphone. The markers represent CPU frequencies, which range from 0.4~GHz (left) to 2.5~GHz (right). We also overlay the load time on a desktop CPU (the dotted line) for comparison purpose.}
   \label{fig:cpu_bottleneck}
-  \end{minipage}
 \end{figure}
 
 Note that increasing clock frequency between 1.6~GHz and 2.4~GHz yields small performance benefits. One may then naively conclude that mobile CPU performance improvements provide marginal improvements in Web performance. However, the ``marginal improvement'' is merely an artifact of using frequency as a performance proxy. At high frequencies, the processor's pipeline is already saturated, and the memory and interconnection become the microarchitectural-level bottlenecks~\cite{clockvsipc}. To overcome this artificial constraint and assess the impact of future mobile CPU improvements, we perform the same experiment on a desktop CPU (Intel Core i5 at 1.2~GHz). The result is shown as the dotted line in \Fig{fig:cpu_bottleneck}. The average webpage load time on the desktop CPU is about 1~second, effectively a 4X speedup over the peak performance of S5. This experiment shows that mobile CPU performance today is still far from reaching a diminishing return point, and it can continue to have a significant impact on mobile Web performance.
@@ -62,20 +52,17 @@ Despite the need for high-performance computation, mobile devices are severely l
 \paragraph{Energy Constraint} Battery technology has not experienced Moore's law-like improvements because of fundamental physics limitations~\cite{battery-mooreslaw}. As a result, the density of lithium-ion batteries has improved by only about 10\% per year~\cite{battery-stats}.  Therefore, the battery capacity of today's mobile devices is determined by the battery's volume, which is largely dictated by the device's screen size~\cite{phonescreen}. Using the smartphone as an example of a start-of-the-art mobile device, \Fig{fig:screen_batt} compares the screen sizes and battery capacities of over 600 smartphones from 2006 to 2014. There is a near-linear correlation between the battery capacity and screen size. As smartphone form factors reach maturity~\cite{phonesize}, the total device energy budget will likely stay severely constrained.
 
 \begin{figure}[t]
-\centering
-  \begin{minipage}[b]{0.47\columnwidth}
-    \centering
-    \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{figs/screen_batt}
-    \caption{\small{There is an almost linear relationship between battery and screen size over the time.}}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{screen_batt}
+  \caption{\small{There is an almost linear relationship between battery and screen size over the time.}}
   \label{fig:screen_batt}
-  \end{minipage}
-  \hspace*{15pt}
-  \begin{minipage}[b]{0.47\columnwidth}
-    \centering
-    \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{figs/phone_power_trend}
-    \caption{\small{CPU power consumption has increased significantly compared to other key components.}}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{phone_power_trend}
+  \caption{\small{CPU power consumption has increased significantly compared to other key components.}}
   \label{fig:phone_power_trend}
-  \end{minipage}
 \end{figure}
 
 \paragraph{Mobile CPU's Rise to Power} Different components contribute to the overall power consumption of a mobile device. \Fig{fig:phone_power_trend} compares the measured power consumption of three major mobile device components: CPU, display, and radio. We select seven top smartphones for each year from 2009 to 2015. They are Motorola's Droid from 2009, and Samsung's Galaxy S, Nexus, S3, S4, S5, and S6 from 2010 through 2015, respectively. Chronologically, the seven phones represent how cutting-edge smartphone technologies have progressed over time. The results are collected while running a standard Web benchmark, Sunspider~\cite{sunspider}, for the CPU(s), and dedicated benchmarks for the other components~\cite{carroll2010analysis, ookla}. We used the Monsoon power monitor to measure the seven smartphones' power consumptions at the battery level.
