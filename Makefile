@@ -1,6 +1,6 @@
 PAPER = paper
-TEX = $(wildcard *.tex)
-BIB = refs.bib
+TEX = $(wildcard tex/*.tex *.tex)
+BIB = tex/refs.bib
 FIGS = $(wildcard figs/*)
 
 .PHONY: all clean

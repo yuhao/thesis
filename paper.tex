@@ -26,7 +26,7 @@
 				% Some packages to write mathematics.
 \usepackage{eucal} 	 	% Euler fonts
 \usepackage{verbatim}      	% Allows quoting source with commands.
-\usepackage{makeidx}       	% Package to make an index.
+%\usepackage{makeidx}       	% Package to make an index.
 \usepackage{psfig}         	% Allows inclusion of eps files.
 \usepackage{epsfig}         	% Allows inclusion of eps files.
 \usepackage{citesort}         	% 
@@ -39,6 +39,23 @@
 				% it out with a percent sign to remove
 				% the word draft before you re-run
 				% Makediss for the last time.
+\usepackage{xspace}
+\usepackage{parskip}
+\usepackage{wrapfig}
+\usepackage{times}
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{titlesec}
+\usepackage{subfig}
+\usepackage{bigstrut}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{array}
+%\usepackage[T1]{fontenc}
+%\usepackage[sc]{mathpazo} % Use the great palatino font provided by the mathpazo package. Add osf for old style figures
+\usepackage{arial} % default for \textsf
+\usepackage{inconsolata} % default for \texttt
+\usepackage[usenames,dvipsnames]{xcolor}
 
 \author{Craig William McCluskey}  	% Required
 
@@ -232,7 +249,7 @@
 \makeatother		% Ends sections where @ is considered a letter.
 			% Now @ cannot be used in commands.
 
-\makeindex    % Make the index
+%\makeindex    % Make the index
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %		The document starts here.			     %
@@ -260,50 +277,18 @@
 \titlepage              % Produces the title page.
 
 
+\graphicspath{{figs/}}
+\input{tex/macros}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Dedication and/or epigraph are optional, but must occur here.      %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-\begin{dedication}
-\index{Dedication@\emph{Dedication}}%
-Dedicated to my wife Shirley.
-\end{dedication}
-
-
-\begin{acknowledgments}		% Optional
-\index{Acknowledgments@\emph{Acknowledgments}}%
-I wish to thank the multitudes of people who helped me. Time would
-fail me to tell of \ldots
-\end{acknowledgments}
-
-
-% The abstract is required. Note the use of ``utabstract'' instead of
-% ``abstract''! This was necessary to fix a page numbering problem.
-% The abstract heading is generated automatically.
-% Do NOT use \begin{abstract} ... \end{abstract}.
-%
-\utabstract
-\index{Abstract}%
-\indent
-This document has the form of a ``fake'' doctoral dissertation
-in order to provide an example of such, but it is actually a
-copy of Miguel Lerma's documentation for the Mathematics
-Department Computer Seminar of 25 March 1998 updated in July 2001
-and following by Craig McCluskey to meet the March 2001
-requirements of the Graduate School.
-
-This document and its source file show to write a Doctoral Dissertation using 
-\LaTeX{} and the utdiss2 package. 
-
-
+\input{tex/dedication}
+\input{tex/ack}
+\input{tex/abst}
 
 \tableofcontents   % Table of Contents will be automatically
                    % generated and placed here.
 
 \listoftables      % List of Tables and List of Figures will be placed
 \listoffigures     % here, if applicable.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -319,17 +304,12 @@ This document and its source file show to write a Doctoral Dissertation using
 % of the include statements (something I found helpful in my own
 % dissertation).
 %
-\include{chapter-introduction}
-
-\include{chapter-instructions}
-
-\include{chapter-howtouse}
-
-\include{chapter-makingbib}
-
-\include{chapter-tables+figs}
-
-\include{chapter-math}
+\input{tex/intro}
+\input{tex/motivation}
+\input{tex/arch}
+\input{tex/runtime}
+\input{tex/lang}
+\input{tex/conc}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -339,14 +319,12 @@ This document and its source file show to write a Doctoral Dissertation using
 % If you have only one appendix, use the command \appendix instead
 % of \appendices.
 %
-\appendices
-\index{Appendices@\emph{Appendices}}%
+%\appendices
+%\index{Appendices@\emph{Appendices}}%
 
-\include{chapter-appendix1}
-
-\include{chapter-appendix2}
-
-\include{chapter-appendix3}
+%\include{tex/chapter-appendix1}
+%\include{tex/chapter-appendix2}
+%\include{tex/chapter-appendix3}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -358,14 +336,14 @@ This document and its source file show to write a Doctoral Dissertation using
 %	to generate the index (if used) MUST be moved to before      %
 %	this section.						     %
 %								     %
-\nocite{*}      % This command causes all items in the 		     %
+%\nocite{*}      % This command causes all items in the 		     %
                 % bibliographic database to be added to 	     %
                 % the bibliography, even if they are not 	     %
                 % explicitly cited in the text. 		     %
 		%						     %
 \bibliographystyle{plain}  % Here the bibliography 		     %
-\bibliography{refs}        % is inserted.			     %
-\index{Bibliography@\emph{Bibliography}}%			     %
+\bibliography{tex/refs}        % is inserted.			     %
+%\index{Bibliography@\emph{Bibliography}}%			     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -378,7 +356,7 @@ This document and its source file show to write a Doctoral Dissertation using
 %	to generate the index (if used) MUST be moved to before      %
 %	the bibliography section.				     %
 %								     %
-\printindex%    % Include the index here. Comment out this line      %
+%\printindex%    % Include the index here. Comment out this line      %
 %		% with a percent sign if you do not want an index.   %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
