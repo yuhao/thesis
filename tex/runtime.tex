@@ -1,6 +1,6 @@
 %!TEX root=paper.tex
 
-\section{WebRT: Smart Web Browser Runtime Optimizing for Energy-Efficiency}
+\chapter{WebRT: Smart Web Browser Runtime Optimizing for Energy-Efficiency}
 \label{sec:runtime}
 
 Today's mobile processors are becoming extremely heterogeneous. They often combine general-purpose cores that have different performance and energy characteristics~\cite{single-ISA} (e.g., asymmetric chip-multiprocessor architecture) with special-purpose domain-specific cores (e.g., \webcore). While the hardware upheaval promises performance and energy improvements for the mobile Web, current Web runtime systems are not designed to fully exploit the capability of the underlying hardware. The main bottleneck is that current runtime-architecture interface merely exposes the hardware as a monolithic sequential execution model to the runtime system while hiding many architecture-level details. Without having a full visibility of the hardware details, current Web runtimes often lead to energy-inefficient decisions or violate user QoS requirement.
@@ -11,7 +11,7 @@ To bridge the widening gap between the architecture complexity and the architect
 
 In the rest of this section, I first provide an overview of \webrt (\Sect{sec:runtime:overview}). I discuss that optimizing energy consumption while delivering desirable user experience requires us first to understand the nature of different user interactions and to devise different optimization schemes accordingly. Specifically, I introduce a user-application interaction model called LTM. LTM captures three fundamental user interactions in mobile Web applications--Loading, Tapping, and Moving--and provides a framework for reasoning about different energy optimization strategies. I then describe \webrt's two critical components. The first component is the webpage-aware scheduler that targets the loading (L) process of a Web application (\Sect{sec:runtime:load}), and the second component is the event-based scheduler that targets the touching (T) and moving (M) interactions (\Sect{sec:runtime:ebs}). Finally, I compare the contrast \webrt with prior work on software support for mobile Web (\Sect{sec:runtime:related}).
 
-\subsection{WebRT Overview}
+\section{WebRT Overview}
 \label{sec:runtime:overview}
 
 An ACMP consists of cores with different microarchitectures, such as out-of-order and in-order. Each core has a variety of frequency settings. Different core and frequency combinations provide a large trade-off space between performance and energy. The objective of our ACMP-based \webrt is to find an ideal ACMP configuration (i.e., a $\langle core, frequency \rangle$ tuple) that minimizes the energy consumption while guaranteeing an acceptable responsive time when a user interaction happens.
@@ -21,7 +21,7 @@ To systematically analyze user interactions in mobile Web applications, we intro
 
 The prediction strategy for Loading needs to be different from that for Touching and Moving. The fundamental difference is that Loading occurs only once per usage session while Touching and Moving interactions occur repetitively throughout the entire Web application usage session. As a result, it is possible to make the prediction for the Touching and Moving interactions based on the history information within the same usage session. For Loading, however, every application loading is likely different from the previous one, and as such we can not make predictions based on previous loadings of (potentially different) applications. Instead, we have to make prediction based on the particular content of a given Web application. I now discuss the \webrt component that targets the Loading (\Sect{sec:runtime:load}) and Touching and Moving interactions (\Sect{sec:runtime:ebs}) separately.
 
-\subsection{Webpage-aware Scheduling}
+\section{Webpage-aware Scheduling}
 \label{sec:runtime:load}
 
 \begin{table}[t]
@@ -70,7 +70,7 @@ We apply a set of techniques to improve the accuracy of the basic linear model. 
 
 \paragraph{Overheads} The scheduler accounts for scheduling overheads, which consist of two components: the prediction overhead and the overhead of changing the architecture configuration (i.e, big/little core migration and/or frequency scaling). The prediction cost is negligible. We assume an 100~$\mu$s overhead for frequency scaling and a 20~$\mu$s overhead for core migration, as indicated in whitepapers released by ARM~\cite{arm-bl-sw-wp, arm-bl-wp}. Note that the overhead of switching architecture configuration also applies to the event-based scheduling discussed below.
 
-\subsection{Event-based Scheduling}
+\section{Event-based Scheduling}
 \label{sec:runtime:ebs}
 
 I propose event-based scheduling (EBS) as the mechanism to optimize energy-efficiency for the Touching (T) and Moving (M) interactions. Each T or M interaction is internally translated to an application event. EBS is based on the observation that a T or M event may occur repetitively throughout a Web application usage session such that it is possible to predict the ideal architecture configuration of an event based on its history information of performance and energy consumption. I first provide an overview of EBS and discuss several key implementation details.
@@ -105,7 +105,7 @@ After the initial model construction, the QoS monitor keeps monitoring event exe
 
 The monitor switches from fine-tuning an event handler's execution to recalibrating its model if it detects that the model is not performing well. We use a simple heuristic that is efficient in practice. If the model mispredicts (i.e., either underpredicts or overpredicts) more than four consecutive times, the monitor requests the model constructor to recalibrate.
 
-\subsection{Related Work}
+\section{Related Work}
 \label{sec:runtime:related}
 
 \paragraph{Single ISA Heterogeneous Scheduling} The particular implementation of \webrt is an example of utilizing single-ISA heterogeneous systems for trading off performance with energy~\cite{single-ISA}. Nvidia's Kal-El~\cite{Tegra3} is a single-ISA heterogeneous system that integrates four high-frequency cores with one low-frequency core. ARM's proposed big.LITTLE system~\cite{big.little} contains an out-of-order Cortex-A15 processor and an in-order Cortex-A7 processor. ACMP architecture is already widely adopted in today's mobile SoCs shipped by major vendors. We expect our \webrt implementation to be readily applicable to commodity mobile hardware.
@@ -119,7 +119,7 @@ Thiagarajan~et al.~\cite{www-battery} break the Web browser's energy consumption
 
 Another portion of software-level optimizations focuses on improving the execution model of the Web browser through asynchronous/multiprocess rendering, resource prefetching, smarter browser caching, etc.~\cite{pocketweb, Adrenaline, smart-caching, webkit2, firefox-spec_parsing}. All these techniques are orthogonal and can be integrated with my proposal, which primarily focused on the core rendering engine of a Web browser.
 
-%\subsection{Preliminary Results}
+%\section{Preliminary Results}
 %\label{sec:runtime:eval}
 %
 %In this section, we present preliminary experiment results of both the event-based scheduling~(\Sect{sec:runtime:eval:ebs}) and the webpage-aware scheduling~(\Sect{sec:runtime:eval:was}).

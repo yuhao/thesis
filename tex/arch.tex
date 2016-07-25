@@ -1,15 +1,13 @@
-\chapter{How to Use the utdiss2 Package}
-\index{How to Use the utdiss2 Package%
-@\emph{How to Use the utdiss2 Package}}%
+%!TEX root=paper.tex
 
-\section{WebCore: Web-Specific Mobile Processor Architecture}
+\chapter{WebCore: Web-Specific Mobile Processor Architecture}
 \label{sec:arch}
 
 Domain-specific specialized architecture has long been deemed as extremely high-performance and energy-efficient because it aggregates hundreds of operations in a few instructions and, therefore, reduces major sources of inefficiencies in general-purpose CPUs~\cite{h264, soda, anysp}. The key challenge of applying architectural specialization to Web computing is how to \textit{retain general-purpose programmability}. The general-purpose programmability is a particular necessity for Web technologies because they involve large pieces of software that are written in a combination of different general-purpose programming languages. For example, Google's Chrome Web browser is developed in 29 languages with over 17 million lines of code~\cite{chromeloc}. Recent work has demonstrated the importance and feasibility of balancing general-purpose programmability and specialization in various data computation domains (e.g., H.264 encoding~\cite{h264}, convolution~\cite{ce}).
 
 Following the same architecture design philosophy of balancing general-purpose programmability and domain-specific specialization, I propose the \webcore, a general-purpose CPU customized and specialized for Web technologies. \webcore's design starts from existing mobile CPUs, and thus retains the general-purpose programmability. It achieves performance and energy improvement by combining customization and specialization techniques. In the rest of this section, I describe the customization and specialization process in \Sect{sec:arch:customization} and \Sect{sec:arch:specialization}, respectively. \Sect{sec:arch:related} discusses prior work on hardware support for mobile Web.
 
-\subsection{Customizing General-Purpose Cores}
+\section{Customizing General-Purpose Cores}
 \label{sec:arch:customization}
 
 \webcore design is based on general-purpose CPUs to best retain the general-purpose programmability. However, existing general-purpose processors may not be an ideal baseline for \webcore, because they are not uniquely tuned for Web applications. \webcore customizes current designs by exploring a vast design space to properly size key microarchitecture parameters.
@@ -92,7 +90,7 @@ By comparing P1 and P2 with Cortex-A15, we find two major sources of inefficienc
 
 Second, the high-performance design P2 also necessitate a 64~KB data cache, doubling the typical L1 data cache size in current mobile CPUs. The need for a large data cache mainly stems from the large working set size on principal data structures (e.g., the DOM tree) during webpage processing. For example, profiling results show that the average data reuse distance for DOM tree accesses is 4~KB (excluding other memory operations interleaved with DOM accesses). The large data cache leads to excessive energy consumption and needs to be optimized.
 
-\subsection{Specializing the Customized Cores}
+\section{Specializing the Customized Cores}
 \label{sec:arch:specialization}
 
 Unusual design parameters in a customized processor tuned for the mobile Web workload indicate that instruction delivery and data feeding are critical to guarantee high performance while still being energy efficient. I propose a specialized functional unit that mitigates the two bottlenecks. The new hardware structure is accessed via a set of high-level language APIs implemented as a runtime library to maintain the general-purpose programmability.
@@ -120,14 +118,14 @@ Due to these considerations, the scratchpad memories are each 1~KB in size. Unde
 
 Programmers trigger the style resolution task by issuing a~\texttt{Style\_Apply(Id, Rules)} API, in which \texttt{Id} represents a DOM tree node ID and \texttt{Rules} represents matched CSS rules produced by the matching phase. One key task of this API implementation is to examine all the CSS properties of a particular DOM node because not all the CSS properties are implemented in the SRU. For properties that can be offloaded to the SRU, the API implementation loads related data into the SRU's scratchpad memory. For those ``unaccelerated'' properties, the runtime creates the necessary compensation code. Specifically, we propose relying on the existing software implementation as a fail-safe fallback mechanism. Once the style resolution results are generated, the results can be copied out to the output scratchpad memory.
 
-\subsection{Related Work}
+\section{Related Work}
 \label{sec:arch:related}
 
 Similar to \webcore, SiChrome~\cite{SiChrome} performs aggressive specializations that map much of the Chrome browser into silicon. The key difference is that \webcore starts from a (well-optimized) general-purpose baseline and thus retains general-purpose programmability while still being energy-efficient. In addition, SiChrome evaluates energy-efficiency using the EDP metric while our Pareto optimal analysis provides a more generic optimization view than EDP.
 
 EFetch~\cite{efetch} and ESP~\cite{esp} also propose specialized hardware structures on top of general-purpose cores to improve the performance and energy-efficiency of Web applications. They view a Web application execution as a sequence of events. As a result, the proposed specialized hardware primarily targets the inefficiencies associated with the event-driven execution model. \webcore views a Web application execution as a mix of different kernels. As such, the proposed specialization technique targets individual kernels. Both views are complementary in that per-event execution can benefit from kernel-level improvement that \webcore provides and vice versa.
 
-%\subsection{Preliminary Results}
+%\section{Preliminary Results}
 %\label{sec:arch:res}
 %
 %\begin{figure}[t]

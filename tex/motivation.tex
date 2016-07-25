@@ -1,8 +1,6 @@
-\chapter{Instructions for Preparing Dissertations, Theses, and Reports}
-\index{Instructions for Preparing Dissertations, Theses, and Reports%
-@\emph{Instructions for Preparing Dissertations, Theses, and Reports}}%
+%!TEX root=paper.tex
 
-\section{The Need for High-Performance and Energy-Efficient Computation in Mobile Web}
+\chapter{The Need for High-Performance and Energy-Efficient Computation in Mobile Web}
 \label{sec:motivation}
 
 This section quantitatively demonstrates the importance of \textit{computation}, among other components such as network and display, to mobile Web's performance and energy consumption. The observations discussed in this section directly motivate my research to focus on the computation layer of the mobile Web and to improve its performance and energy-efficiency.
@@ -13,7 +11,7 @@ The computation layer involves many mobile SoC components, such as CPU, GPU, and
 
 In the rest of this section, I first show that mobile Web performance increasingly depends on the computational capability of mobile CPUs, indicating the need for a high-performance computation~(\Sect{sec:motivation:perf}). I then show that mobile devices' power consumption is increasingly dominated by CPUs, calling for an energy-efficient computation~(\Sect{sec:motivation:energy}). Note that all the results presented in \Sect{sec:motivation:energy} are adapted from a recent research project~\cite{mobilecpu} that I collaborated on and contributed to.
 
-\subsection{The Importance of High-Performance Computation in Mobile Web}
+\section{The Importance of High-Performance Computation in Mobile Web}
 \label{sec:motivation:perf}
 
 Computation and network largely dictate the performance of mobile Web. Conventional wisdom suggests that mobile Web performance is primarily limited by the network latency. In this section, I quantify the impact of CPU and network performance by experimentally comparing how the webpage load time varies with different CPU and network performance on today's high-end smartphone Galaxy S5. I show that as cellular network technologies evolve over generations, mobile Web performance becomes sensitive to CPU performance.
@@ -56,7 +54,7 @@ Note that increasing clock frequency between 1.6~GHz and 2.4~GHz yields small pe
 The takeaway from the results is that continuous improvement to network latency will eventually, if not already, take us to a point where further Web performance improvement will be unattainable without improving CPU performance.  This is a timely conclusion, especially when low latency cellular network, such as LTE, is already prevalent today. It is estimated that LTE's subscription will reach 1.37 billion (one-fifth of the world population) by the end of 2015~\cite{lte_subscription}.
 %Note, however, that we do \emph{not} claim that network latency is irrelevant. When the network deviates from an ideal low-latency condition, or in emerging markets where high-latency network accesses are prevalent~\cite{em}, mobile Web performance is indeed constrained by the network latency.
 
-\subsection{The Need for Energy-Efficient Computation in Mobile Web}
+\section{The Need for Energy-Efficient Computation in Mobile Web}
 \label{sec:motivation:energy}
 
 Despite the need for high-performance computation, mobile devices are severely limited by a battery-imposed energy budget, which in turn limits the achievable performance. In this section, I first use smartphones to quantitatively demonstrate that the energy budget of mobile devices is likely to stay stringently constrained in the near future. I then show that the CPU is becoming the worst power and energy consumer of a mobile device as compared to other components such as display and radio. There is clearly a need for energy-efficient computation in the mobile Web. Data presented here is adapted from the results of a related project~\cite{mobilecpu} that I collaborated on.

@@ -1,8 +1,6 @@
-\chapter{An Example of Mathematical Writing}
-\index{An Example of Mathematical Writing%
-@\emph{An Example of Mathematical Writing}}%
+%!TEX root=paper.tex
 
-\section{GreenWeb: Web Language Extensions for Energy-Efficient Web Computing}
+\chapter{GreenWeb: Web Language Extensions for Energy-Efficient Web Computing}
 \label{sec:lang}
 
 %Web application developers today must be conscious of energy efficiency. Current abstractions between software and hardware, however, do not provide developers opportunities to optimize for energy efficiency. Instead, energy optimizations are mostly conducted at the hardware and OS level via techniques such as dynamic voltage and frequency scaling. Although effective from a hardware perspective, the key limitation of these techniques is that they are not aware of user quality-of-service (QoS) expectation and may lead to poor experience~\cite{big-little, ebs, pgdvfs}. Failing to deliver desirable QoS experience can cause severe consequences. For example, a 1-second delay in webpage load time costs Amazon \$1.6 billion annual lost in sales~\cite{Eaton:2013uq}.
@@ -15,7 +13,7 @@ To better guide runtime optimizations, I present \greenweb, a set of Web languag
 
 In this section, I first discuss the relationship between QoS, performance, and energy consumption. It lays the foundation of abstracting user QoS experience~(\Sect{sec:lang:eqos}). I then introduce QoS type and QoS target as two fundamental abstractions that capture two critical aspects of user QoS experience~(\Sect{sec:lang:abst}). I then present the design and specification of \greenweb, a group of Web language extensions that allows developers to easily express the two QoS abstractions~(\Sect{sec:lang:spec}). I further discuss the relationship between the \greenweb extensions and the \webrt runtime~(\Sect{sec:lang:inter}), and argue that \greenweb and \webrt are synergistic while independent. Finally, I discuss \greenweb in the general context of language support for performance and energy-efficiency~(\Sect{sec:lang:related}).
 
-\subsection{Trade-off Between QoS, Performance, and Energy}
+\section{Trade-off Between QoS, Performance, and Energy}
 \label{sec:lang:eqos}
 
 We illustrate the relationship between application QoS, performance, and energy savings in~\Fig{fig:eqos}. Performance degrades from left to right on the~\textit{x}-axis. The left and right~\textit{y}-axes indicate QoS and energy savings, respectively. Foundational work in human-computer interaction research~\cite{eventlatency, designUI, info_vis, response_time, percent_done, usability_engineering} indicates that interactive application QoS can be classified into three distinct states as machine performance degrades: \textit{imperceptible} $[P_H,P_I]$, \textit{tolerable} $(P_I,P_U]$, and \textit{unusable} $(P_U,P_L]$.
@@ -32,7 +30,7 @@ In the imperceptible region, performance can degrade without any user-perceptibl
 
 In summary, QoS-aware energy-efficiency optimization implies one of the following two optimization strategies depending on user QoS expectation. First, when the QoS expectation is high, guarantee imperceptible QoS experience with the minimal energy by exploiting the performance slack between $P_H$ and $P_I$. Second, when the user QoS expectation is low, guarantee usable QoS experience with the minimal energy by achieving a performance of $P_U$.
 
-\subsection{QoS Abstractions for Web Applications}
+\section{QoS Abstractions for Web Applications}
 \label{sec:lang:abst}
 
 Abstracting user QoS experience is the prerequisite in expressing QoS information in a programming language. Based on the understanding of the interplay between QoS and energy consumption, I propose the QoS type and QoS target abstractions. I discuss why they are necessary and sufficient to capture user QoS experience for QoS-aware energy-efficiency optimizations.
@@ -89,7 +87,7 @@ In contrast, when users are aware of a computationally intensive job being proce
 
 User interactions fall into three distinct categories based on different QoS type and QoS target combinations as listed in \Tbl{tab:qos_info}. Although the absolute values of QoS target ($P_I$ and $P_U$) in each category can vary slightly with user perceptibility, their magnitudes differ significantly across categories (i.e., tens of milliseconds versus hundreds of milliseconds versus seconds). Thus, QoS target is an important abstraction to differentiate different performance requirements.
 
-\subsection{QoS-Aware Web API Design}
+\section{QoS-Aware Web API Design}
 \label{sec:lang:spec}
 
 %\begin{figure}[t]
@@ -154,7 +152,7 @@ To express the ``single'' QoS type, the \texttt{onevent-qos} property accepts a 
 
 Developers do not have to specify the QoS target values, and the \greenweb runtime will use the $P_I$ and $P_U$ values in \Tbl{tab:qos_info} as the default QoS target. However, we also provide the flexibility for developers to overwrite default QoS targets. This is achieved by specifying absolute values of $P_I$ and $P_U$ (in milliseconds) after \texttt{single} or \texttt{continuous}, as illustrated by the third rule in \Tbl{tab:api_spec}.
 
-\subsection{GreenWeb and WebRT Inteplay}
+\section{GreenWeb and WebRT Inteplay}
 \label{sec:lang:inter}
 
 Combing \greenweb and \webrt in an integrated system would provide programmers an opportunity to guide runtime energy-efficiency optimizations by providing QoS ``hints.'' This approach would be both \textit{precise} and \textit{efficient}. It is precise because only developers have the exact knowledge of code logic. They can provide QoS type and target information that is difficult for the runtime to infer. It is efficient because it does not entail performance and energy overhead of runtime detection. Such a design philosophy is similar to traditional pragma-based programming APIs such as OpenMP. For example, the ``\texttt{omp for}'' pragma in OpenMP indicates that iterations in a \texttt{for} loop are completely independent such that the runtime can safely parallelize the loop without the need to check for correctness. Similarly, \greenweb annotations would allow the Web runtime to perform ``best-effort'' optimizations without having to infer QoS information. I leave the full integration and evaluation of such a language-runtime co-designed system as future work.
@@ -163,7 +161,7 @@ It is worth noting that although \greenweb and \webrt are compatible and can be 
 
 \webrt is also independent of \greenweb because it by design does not rely on programmer-assisted annotations to perform scheduling. Without QoS ``hints'' from the application, the \webrt schedulers can assume a default QoS target and QoS type for each Loading, Touching, and Moving interaction. The \webrt schedulers can also attempt to infer the QoS type and QoS target by profiling event executions to identify which category in \Tbl{tab:qos_info} that an event falls into. I leave the quantitative comparison between unguided and \greenweb-guided \webrt to future work.
 
-\subsection{Related Work}
+\section{Related Work}
 \label{sec:lang:related}
 
 \paragraph{Language Support for Web Performance} The Web community has a long tradition of providing language extensions that allow developers to specify ``hints'' for browsers. The focus, however, has been primarily on \textit{performance} optimizations. \greenweb, to the best of our knowledge, is the first Web language extension that specifically targets \textit{energy}.
