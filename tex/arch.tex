@@ -10,9 +10,9 @@ Following the same architecture design philosophy of balancing general-purpose p
 \section{Customizing General-Purpose Cores}
 \label{sec:arch:customization}
 
-\webcore design is based on general-purpose CPUs to best retain the general-purpose programmability. However, existing general-purpose processors may not be an ideal baseline for \webcore, because they are not uniquely tuned for Web applications. \webcore customizes current designs by exploring a vast design space to properly size key microarchitecture parameters.
+\webcore design is based on general-purpose CPUs to best retain the general-purpose programmability. However, existing general-purpose processors may not be an ideal baseline for \webcore, because they are not uniquely tuned for Web applications. \webcore customizes current designs by exploring a vast design space to properly size key microarchitecture parameters. I derive two major conclusions through the customization process. First, out-of-order designs provide more flexibility for energy versus performance trade-offs than in-order designs. Second, a customized out-of-order design configuration still contains two sources of inefficiency--instruction delivery and data feeding--that need to be further mitigated.
 
-I derive two major conclusions through the customization process. First, out-of-order designs provide more flexibility for energy versus performance trade-offs than in-order designs. Second, a customized out-of-order design configuration still contains two sources of inefficiency---instruction delivery and data feeding---that need to be further mitigated.
+\input{tex/table/dse}
 
 \paragraph{Design Space Exploration (DSE)} We mine through the top 10,000 websites as ranked by Alexa~\cite{alexa} and leverage the principal component analysis (PCA) to select the 12 most representative websites. All except one happen to rank among Alexa's top 25 websites. We consider both mobile and desktop versions of the 12 websites because tablets typically load the desktop version of webpages. In total, we study 24 distinct webpages.
 
@@ -21,68 +21,29 @@ We consider various tunable microarchitectural parameters such as issue width, i
 It is not feasible to simulate all of the design points simply due to time constraints. Therefore, we leverage regression modeling techniques~\cite{RMS} to predict the performance and power consumption of various design points in the space. Such effort has been used successfully in the past for architecture design-space exploration~\cite{dse,comt}. We construct performance and power models for in-order and out-of-order designs separately. Overall, the out-of-order models' error rates are below 6.0\%. The in-order performance and power models' errors are within 5\% and 2\%, respectively. The in-order models are more accurate because of their simpler design.
 
 \begin{figure}[t]
-\centering
-  \begin{minipage}[b]{0.3\columnwidth}
-  	\centering
-  	\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{ivso}
-  	\caption{In-order versus out-of-order Pareto optimal frontiers.}
-  	\label{fig:ivso}
-  \end{minipage}
-  \hspace*{10pt}
-  \begin{minipage}[b]{0.3\columnwidth}
-  	\centering
-  	\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{pareto_io}
-  	\caption{In-order Pareto optimal frontier for each kernel.}
-  	\label{fig:pareto_io}
-  \end{minipage}
-  \hspace*{10pt}
-  \begin{minipage}[b]{0.3\columnwidth}
-  	\centering
-  	\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{pareto_ooo}
-  	\caption{Out-of-order Pareto optimal frontier for each kernel.}
-  	\label{fig:pareto_ooo}
-  \end{minipage}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.7\columnwidth]{ivso}
+  \caption{In-order versus out-of-order Pareto optimal frontiers.}
+  \label{fig:ivso}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.7\columnwidth]{pareto_io}
+  \caption{In-order Pareto optimal frontier for each kernel.}
+  \label{fig:pareto_io}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.7\columnwidth]{pareto_ooo}
+  \caption{Out-of-order Pareto optimal frontier for each kernel.}
+  \label{fig:pareto_ooo}
 \end{figure}
 
 \paragraph{Core Choice} Design space exploration helps customization at the ``macro-architecture'' level, i.e., determining between in-order and out-of-order designs. We understand the difference between in-order and out-of-order design space by examining their Pareto optimal frontiers. Design points on a Pareto optimal frontier reflect different optimal design decisions given specific performance/energy targets. \Fig{fig:ivso} shows the Pareto optimal frontiers of the in-order and out-of-order design space. We observe that the in-order design space has a narrow performance range of 1~second, whereas the out-of-order space covers a 4~second performance range. The performance range contrast indicates that out-of-order designs can more flexibly balance performance with energy and, therefore, are better design baselines for mobile Web applications.
 
 To understand the difference behind the in-order versus out-of-order designs, we study the kernel behaviors in Web applications. There are four important computation kernels in executing a Web application: i.e.,~\textit{Dom}, \textit{Style}, \textit{Layout}, and \textit{Render}. They contribute to about 75\% of the webpage load time and energy consumption.~\Fig{fig:pareto_io} and~\Fig{fig:pareto_ooo} show the Pareto optimal frontiers of the in-order and out-of-order design space for each kernel. We find that the kernel variance in the in-order designs is more pronounced than in the out-of-order designs. As we push toward more performance in the in-order design space, some kernels stop scaling gracefully on the energy-versus-delay curve, and eventually become a performance bottleneck. Overall, in-order designs have low marginal performance value with high marginal energy cost~\cite{marginal}. In contrast, out-of-order cores can cover the variances across the different kernels through complex execution logic and, therefore, provide wider performance and energy trade-off range.
-
-\begin{table}[t]
-\large
-\centering
-\captionsetup{width=.6\columnwidth}
-\caption{\small Microarchitecture configurations for P1 and P2 in
-\Fig{fig:ivso}. They represent different energy-delay trade-offs. For comparison
-purpose, we also show the parameters for ARM Cortex-A15, whose information is
-gather from measurements using the 7-Zip LZMA Benchmark~\cite{7cpu-a15} and
-ARM's public presentation~\cite{a15-slide}.}
-\renewcommand*{\arraystretch}{1.2}
-\renewcommand*{\tabcolsep}{10pt}
-\resizebox{.6\columnwidth}{!}
-{
-	\begin{tabular}{l l l l}
-	\toprule[0.15em]
-        ~      & \bigstrut\textbf{P1} & \bigstrut\textbf{P2} & \bigstrut\textbf{Cortex-A15}\\
-	\midrule[0.05em]
-        Issue width						&	1		&	3	&	3	\\
-        \# Functional units				&	2		&	3	&	8	\\
-        Load queue size (\# entries)		&	4		&	16	&	16	\\
-        Store queue size (\# entries)	&	4		&	16	&	16	\\
-        BTB size (\# entries)   &       1024    &       128 &   64       \\
-        ROB size (\# entries)			&	128		&	128	&	40+	\\
-        \# Physical registers			&	128		&	128	&	?	\\
-        L1 I-cache size (KB)				&	64		&	128	&	32	\\
-        L1 I-cache delay (cycles)		&	1		&	2	&	?	\\
-        L1 D-cache size (KB)				&	8		&	64	&	32	\\
-        L1 D-cache delay (cycles)		&	1		&	1	&	4	\\
-        L2 cache size (KB)				&	256&	1024	&	512\textasciitilde4096	\\
-        L2 cache delay (cycles)			&	16		&	16	&	21	\\
-	\bottomrule[0.15em]
-    \end{tabular}
-}
-\label{tab:dse:ednp}
-\end{table}
 
 \paragraph{Sources of Inefficiency} DSE also helps customization at the microarchitecture level. We examine microarchitectural parameters of two out-of-order Pareto optimal designs: P1 and P2 in \Fig{fig:ivso}. They represent designs optimized for different performance and energy targets. P1 is optimized for minimal energy consumption in the out-of-order space. P2 is a high-performance design with a performance of 1500 MIPS (million instructions per second). \Tbl{tab:dse:ednp} summarizes the microarchitecture configurations of the two designs. For comparison purposes, it also lists the same parameters for ARM Cortex-A15, which represents today's high-end mobile CPU.
 
