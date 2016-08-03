@@ -5,7 +5,19 @@
 
 Domain-specific specialized architecture has long been deemed as extremely high-performance and energy-efficient because it aggregates hundreds of operations in a few instructions and, therefore, reduces major sources of inefficiencies in general-purpose CPUs~\cite{h264,soda,anysp}. The key challenge of applying architectural specialization to Web computing is how to \textit{retain general-purpose programmability}. The general-purpose programmability is a particular necessity for Web technologies because they involve large pieces of software that are written in a combination of different general-purpose programming languages. For example, Google's Chrome Web browser is developed in 29 languages with over 17 million lines of code~\cite{chromeloc}. Recent work has demonstrated the importance and feasibility of balancing general-purpose programmability and specialization in various data computation domains (e.g., H.264 encoding~\cite{h264}, convolution~\cite{ce}).
 
-Following the architecture design philosophy of balancing general-purpose programmability and domain-specific specialization, I propose the \webcore, a general-purpose CPU customized and specialized for Web technologies. \webcore's design starts from existing mobile CPUs, and thus retains the general-purpose programmability. It achieves performance and energy improvement by combining customization and specialization techniques. In the rest of this section, I describe the customization and specialization process in \Sect{sec:arch:customization} and \Sect{sec:arch:specialization}, respectively. \Sect{sec:arch:related} puts \webcore in the context of prior work on hardware support for the mobile Web.
+%Following the architecture design philosophy of balancing general-purpose programmability and domain-specific specialization, I propose the \webcore, a general-purpose CPU customized and specialized for Web technologies. \webcore's design starts from existing mobile CPUs, and thus retains the general-purpose programmability. It achieves performance and energy improvement by combining customization and specialization techniques. In the rest of this section, I describe the customization and specialization process in \Sect{sec:arch:customization} and \Sect{sec:arch:specialization}, respectively. \Sect{sec:arch:related} puts \webcore in the context of prior work on hardware support for the mobile Web.
+
+Following the architecture design philosophy of balancing general-purpose programmability and domain-specific specialization, we propose \webcore, \textit{a general-purpose core customized and specialized for mobile Web computing}. In comparison to prior work that either takes a fully software approach on general-purpose processors~\cite{zoomm,ParallelBrowser} or a fully hardware specialization approach~\cite{SiChrome}, our design strikes a balance between the two. On one hand, \webcore retains the flexibility and programmability of a general-purpose core. It naturally fits in the multicore SoC that is already common in today's mainstream mobile devices. On the other hand, it achieves energy-efficiency improvement via modest hardware specializations that create closely coupled datapath and data storage.
+
+We begin by examining existing general purpose designs for the mobile Web applications. Through exhaustive design space exploration, we find that existing general purpose designs bear inherent sources of energy-inefficiency. In particular, instruction delivery and data feeding are two major bottlenecks. We show that customizing current designs by properly sizing key design parameters achieves better energy efficiency. The customization step ensures that further optimizations are performed upon an optimized general-purpose baseline.
+
+Building on the customized general-purpose baseline, we develop specialized hardware to further overcome the instruction delivery and data feeding bottlenecks. We propose two new optimizations: the \emph{``Style Resolution Unit''} (SRU) and a \emph{``Software-Managed Browser Engine Cache.''} The SRU is a hardware accelerator for the critical style-resolution kernel within the Web browser engine. It is based on the observation that the style-resolution kernel has abundant fine-grained parallelism that is hidden in a software implementation but can be captured by a dedicated hardware structure. SRU employs a GPU-like multi-lane architecture to exploit the inherent parallelism. Through exploiting the parallelism, the SRU aggregates enough computations in a few operations, which effectively increases the arithmetic intensity and offsets the instruction delivery and data feeding overhead.
+
+The proposed browser engine cache structure improves data feeding efficiency by exploiting the unique data access pattern of the browser engine's principal data structures such as the DOM tree and the Render tree. Web applications typically operate on one DOM/Render tree node heavily and traverse to the next one, indicating both heavy data reuse and predictable access pattern. The browser engine cache uses a small and energy-conserving hardware memory to capture the heavy data reuse and uses software to predict the access pattern and to manage the cache. Overall, the browser cache achieves a high hit rate for the important data structures but with extremely low accessing energy.
+
+Our results show that customizations alone on the existing general-purpose mobile processor design lead to 22.2\% performance improvement and 18.6\% energy saving. Our specialization techniques achieve an additional 9.2\% performance improvement and 22.2\% overall energy saving; the accelerated portion itself achieves up to 10X speedup. Finally, we also show that our specialization incurs negligible area overhead. More importantly, such overhead, if dedicated to tuning already existing general-purpose architectural features (e.g., caches), lead to much lower energy-efficiency improvements.
+
+The rest of the paper is organized as follows. We first describe our experimental setup including software/hardware infrastructure and application selection in \Sect{sec:arch:exp}. We then describe the design-space explorations that allow us to identify sources of inefficiency in existing general-purpose processors and customize them for mobile Web applications in \Sect{sec:arch:customization}. Building on top of the customized general-purpose designs, we further propose the two new specialization techniques in \Sect{sec:arch:sru} and \Sect{sec:arch:cache}. We show that our proposed \webcore achieves significant performance and energy-efficiency improvement over existing designs in \Sect{sec:arch:eval}. We review related work in \Sect{sec:arch:related}.
 
 \section{Experimental Setup}
 \label{sec:arch:exp}
@@ -14,24 +26,13 @@ Before we begin our investigation, we describe our software infrastructure, spec
 
 \paragraph{Web Browser} We focus on the popular WebKit~\cite{webkit} rendering engine used in Google Chromium (Version 30.0) for our studies. WebKit is also widely used by other popular mobile browsers, such as Apple's Safari and Opera.
 
-\paragraph{Benchmarked Web Applications}  We pay close attention to the choice of webpages to ensure that the WebCore design is not misled. We mine through the top 10,000 websites as ranked by Alexa~\cite{alexa} and pick the 12 most representative websites. All except one happen to rank among Alexa's top 25 websites. The 12 benchmarked websites also cover 10 of BBench's 11 webpages~\cite{BBench}. \Sect{sec:eval} lists the website names.
-%Please refer to~\Sect{sec:related} for a discussion of BBench. 
+\paragraph{Benchmarked Web Applications}  We pay close attention to the choice of webpages to ensure that the WebCore design is not misled. We mine through the top 10,000 websites as ranked by Alexa~\cite{alexa} and pick the 12 most representative websites. All except one happen to rank among Alexa's top 25 websites. The 12 benchmarked websites also cover 10 of BBench's 11 webpages~\cite{BBench}. \Sect{sec:arch:eval} lists the website names. We refer interested readers to \Sect{sec:arch:related:char} for a discussion of BBench. 
 
 \begin{figure}[t]
-\centering
-\subfloat[\small{We pick 24 representative webpages from 10,000 of the hottest webpages as per \texttt{www.alexa.com}.}]
-{
-  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{pca}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.55\columnwidth]{pca}
+  \caption{We pick 24 representative webpages from 10,000 of the hottest webpages as per \texttt{www.alexa.com}}
   \label{fig:pca}
-}
-\hspace*{15pt}
-\subfloat[\small{~\website{www.cnn.com} is a representative webpage from our benchmark suite because it is almost the centroid.}]
-{
-  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{cnn}
-  \label{fig:cnn}
-} 
-\caption{\small Benchmark representativeness analysis.}
-\label{fig:bench}
 \end{figure}
 
 We consider not only the mobile version of the 12 websites, but also their desktop counterparts. Many mobile users still prefer desktop-version websites for their richer content and experience~\cite{Slocum:2011fk,Bixby:2011uq}. Moreover, many mobile devices, especially tablets, typically load the desktop version of webpages by default. As webpage sizes exceed 1~MB~\cite{Everts:2011kx}, we must study mobile processor architectures that can process more complex content and not just simple mobile webpages.
@@ -74,6 +75,13 @@ In particular, we use linear regression modeling~\cite{RMS} to construct our pre
 \end{equation}
 
 We find that 2,000 \textit{uniformly at random} (UAR) samples of microarchitecture configurations from the design space are sufficient in our case to construct robust models. We also obtain 500 additional UAR samples from the cache design space (both L1 and L2) to reinforce the credibility of instruction and data cache design predictions. We perform cross-validation of the model (i.e., we partition a sample dataset into complementary subsets, and perform analysis on one subset and validate the analysis on the other subset), and then obtain additional samples from the design space for full evaluation.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.55\columnwidth]{cnn}
+  \caption{\website{www.cnn.com} is a representative webpage from our benchmark suite because it is almost the centroid.}
+  \label{fig:cnn}
+\end{figure}
 
 In order to derive general conclusions about the design space and optimize for the common case, in this section we present only our in-depth analysis for the representative website \website{www.cnn.com}. ~\Fig{fig:cnn} compares~\website{www.cnn.com} with other webpages to demonstrate that it is indeed representative of the other benchmarked webpages. The $x$-axis and $y$-axis represent the number of DOM tree nodes and the number of~\textsf{class} attributes in HTML. These are the two webpage characteristics that are most correlated with a webpage's load time and energy consumption~\cite{big-little}. As the figure shows,~\website{www.cnn.com} is roughly the centroid of the benchmarked webpages, and thus we use it as a representative webpage for the common case.
 
@@ -211,7 +219,7 @@ Programmers trigger the style resolution task by issuing a~\texttt{Style\_Apply(
 One key task of this API implementation is to examine all the CSS properties of a particular DOM node because not all the CSS properties are implemented in the SRU (as discussed in~\Sect{sec:sru:hw}). For properties that can be offloaded to the SRU, the API implementation loads related data into the SRU's scratchpad memory. For those ``unaccelerated'' properties, the runtime creates the necessary compensation code. Specifically, we propose relying on the existing software implementation as a fail-safe fallback mechanism. Once the style resolution results are generated, the results can be copied out to the output scratchpad memory.
 
 \section{Browser Engine Cache}
-\label{sec:cache}
+\label{sec:arch:cache}
 
 To further improve the energy-efficiency of date feeding, we propose the browser engine cache. It is based on the observation that Web applications' accesses to principal data structures, such as the DOM tree and the Render tree, exhibit heavy data reuse and predictable access pattern~(\Sect{sec:cache:motivation}). Based on such an observation, the browser engine cache uses a small hardware memory structure coupled with a lightweight software-based cache management layer to provide energy-efficient data access~(\Sect{sec:cache:hw}). In addition, similar to SRU, we also provide a set of high-level language APIs that allow Web browser developers to easily access the browser engine cache~(\Sect{sec:cache:sw}).
 
