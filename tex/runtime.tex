@@ -180,7 +180,7 @@ We evaluate the same 2,500 webpages that we used to assess the accuracy of the r
     \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{boxplot}
 \label{fig:results_energy}
 }
-\hspace*{0.15pt}
+\hspace*{15pt}
 \subfloat[Number of webpages that load under the strict cut-off latency of 3~seconds.]{
     \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{results_cutoff}
 \label{fig:results_cutoff}
@@ -205,7 +205,7 @@ However, the flexibility to scale the frequency while loading a webpage sometime
 
 For example, \website{www.autoblog.com} (top-left in~\Fig{fig:pareto}) when loaded under 920~MHz (on the big core) just surpasses the 3-second deadline by 0.1 seconds, but has to fall back using 1.2~GHz under the webpage-aware scheduler. At 1.2~GHz, the webpage loads in only 1.8 seconds but consumes 37\% more energy than 920~MHz. However, under the OS scheduler, our statistics show that the OS boosts the frequency above 920~MHz for only around 20\% of the time, and finishes the load in 2.7 seconds. Compared with the webpage-aware scheduler that runs at 1.2~GHz for this webpage, the OS scheduler in this case saves 20\% energy, effectively exploiting the high marginal value of energy.
 
-\paragraph{Discussion} For complete evaluation, we also assess an integrated scheduler that combines the webpage-aware scheduler with OS DVFS. The purpose is to exploit the potentially high marginal value of energy via OS DVFS, but bound the DVFS space to avoid frequencies that are unnecessarily high (wasting energy) or low (missing the cut-off latency).
+\paragraph{Integrated Scheduler} For complete evaluation, we also assess an integrated scheduler that combines the webpage-aware scheduler with OS DVFS. The purpose is to exploit the potentially high marginal value of energy via OS DVFS, but bound the DVFS space to avoid frequencies that are unnecessarily high (wasting energy) or low (missing the cut-off latency).
 
 \begin{figure}[t]
 \subfloat[Relative energy of the webpage-aware scheduler against the OS scheduler.]{
@@ -228,37 +228,208 @@ Specifically, the webpage-aware scheduler first restricts the OS DVFS scheduling
 \section{Event-based Scheduling}
 \label{sec:runtime:ebs}
 
-I propose event-based scheduling (EBS) as the mechanism to optimize energy-efficiency for the Touching (T) and Moving (M) interactions. Each T or M interaction is internally translated to an application event. EBS is based on the observation that a T or M event may occur repetitively throughout a Web application usage session such that it is possible to predict the ideal architecture configuration of an event based on its history information of performance and energy consumption. I first provide an overview of EBS and discuss several key implementation details.
+I propose event-based scheduling (EBS) as the mechanism to optimize energy-efficiency for the Touching (T) and Moving (M) interactions. Each T or M interaction is internally translated to an application event. EBS is based on the observation that a T or M event may occur repetitively throughout a Web application usage session such that it is possible to predict the ideal architecture configuration of an event based on its history information of performance and energy consumption. We first present our motivation for performing event-based scheduling at the event handler level (\Sect{sec:runtime:ebs:char}). We then provide a high-level design overview of the event-based scheduling framework~(\Sect{sec:runtime:ebs:overview}) and then describe its implementation details~(\Sect{sec:runtime:ebs:sched}).
 
-\paragraph{Overview} The key idea of identifying an event's ideal execution configuration is to build a performance model and an energy model. They predict an event's latency and energy consumption under any core and frequency combination. With the two models, EBS sweeps all possible core and frequency combinations and selects the one that meets the QoS target with minimal energy.
+\subsection{Scheduling Unit}
+\label{sec:runtime:ebs:char}
 
-The scheduler consists of a simple dispatch frontend and scheduling backend as illustrated in~\Fig{fig:runtime}. The frontend \textit{Dispatch} unit extracts relevant event information, and passes it to the backend. The backend consists of a \textit{Detector}, a \textit{Model Constructor} and a \textit{QoS Monitor}. The detector
-automatically identifies each event's QoS requirement. In its simplest form, the detector assumes a default latency target, such as 100~ms, for each event. If an event is annotated with programmer-guided QoS hints such as those enabled by the \greenweb language extensions as I will discuss in \Sect{sec:lang}, the detector can also extract the specified QoS information from the application. The model constructor builds a performance and energy model for each event. The models and event QoS information are then fed into the QoS monitor, which predicts the architecture configuration for executing an event while meeting the specified QoS target.
+The scheduling unit in the event-based scheduler is the event handler. Whenever an event is triggered, a corresponding event handler is executed. \Fig{fig:runtime} provides an example, showing how event handlers H1, H2, and H3 (in that order) are pushed into the event queue for execution. For events that share the same performance constriant, we find that their event handlers have different execution latencies, and therefore lead to different performance slacks. We must treat each event handler differently and make scheduling decisions at that granularity.
 
-During application execution, the QoS monitor keeps monitoring event execution time and energy consumption on the hardware and uses the information to adjust its prediction and scheduling decisions on the fly, similar to conventional feedback-driven optimizations~\cite{FDO}. Intuitively, it is possible for the performance and energy models to underpredict or overpredict the architecture configuration. Under such circumstances, the monitor can decide to tune the predicted frequency or transition between big and little cores. If the models are deemed completely unusable, the monitor informs the model constructor to recalibrate the models. We now describe some key implementation details of the QoS monitor operations.
+We explain the variation in the event handlers' execution behavior using the Ember.js-based todo list application. \Fig{fig:slack} shows the sorted execution latencies of all the event handlers. The $x$-axis corresponds to the event handlers and the $y$-axis corresponds to the event handlers' execution latencies. In this example, we assume that the performance target for the scheduler is 100~ms, which is a common performance target for a smooth responsiveness.
 
 \begin{figure}[t]
-  \centering
-  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{runtime}
-  \caption{\small{The EBS runtime framework.}}
-  \label{fig:runtime}
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=0.9\columnwidth]{slack}
+\caption{\small{Event handler variation in Ember.js todo list application.}}
+\label{fig:slack}
 \end{figure}
 
-\paragraph{Performance Model} The performance model predicts event execution time under different frequencies. We use the classical DVFS analytical model initially proposed in~\cite{dvfs_model}, and employed in subsequent work, such as~\cite{dvfs_power}:
+We observe a large latency variation for the handlers in~\Fig{fig:slack}. We label three of the application's representative event handlers as the application executes: \texttt{onkeyup},~\texttt{onchange}, and~\texttt{onclick}. The~\texttt{keyup} event handler only processes one keystroke and therefore finishes execution very quickly in just 2~ms, which leaves a large amount of slack (98\%) for the scheduler to exploit. In contrast, the~\texttt{onchange} event handler adds one entry into the todo list. It requires about 50~ms for execution, which translates to only about 50\% slack in performance. Lastly, the~\texttt{onclick} event handler deletes all the entries in the todo list. The processing time exceeds the performance constraint, and as such there is no opportunity to exploit performance slack. Instead, it requires a higher performance configuration, if available.
+
+\subsection{Scheduler Design Overview}
+\label{sec:runtime:ebs:overview}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{runtime}
+\caption{\small{Event-based runtime scheduling framework.}}
+\label{fig:runtime}
+\end{figure*}
+\label{sec:runtime:overview}
+
+The event-based scheduler predicts the ideal heterogeneous architecture execution configuration (i.e., a $\langle core, frequency \rangle$ tuple) whenever an event is triggered and the corresponding event handler is executed such that it ``barely'' meets the performance target with minimal energy consumption. It is important to emphasize that one event may lead to multiple frames being updated. Therefore, the \greenweb runtime operates on a per-frame basis as frames are what ultimately dictate user perceivable experience. If an event execution only produces one frame, the runtime finds the ideal execution configuration for the single frame associated with the event. If an event's execution leads to a sequence of frames such as in an animation, the runtime continuously identifies the ideal execution configuration for each frame until all the frames associated with the event are produced. All the associated frames share the same QoS target of the event.
+
+The key idea of identifying an event's ideal execution configuration is to build a performance model and an energy model. They predict an event's latency and energy consumption under any core and frequency combination. With the two models, EBS sweeps all possible core and frequency combinations and selects the one that meets the QoS target with minimal energy.
+
+The scheduler consists of a simple dispatch frontend and scheduling backend as illustrated in~\Fig{fig:runtime}. The frontend \textit{Dispatch} unit extracts relevant event information, and passes it to the backend. The backend consists of a \textit{Detector}, a \textit{Model Constructor} and a \textit{QoS Monitor}. The detector automatically identifies each event's QoS requirement. In its simplest form, the detector assumes a default latency target, such as 100~ms, for each event. If an event is annotated with programmer-guided QoS hints such as those enabled by the \greenweb language extensions as I will discuss in \Sect{sec:lang}, the detector can also extract the specified QoS information from the application. The model constructor builds a performance and energy model for each event. The models and event QoS information are then fed into the QoS monitor, which predicts the architecture configuration for executing an event while meeting the specified QoS target.
+
+During application execution, the QoS monitor keeps monitoring event execution time and energy consumption on the hardware and uses the information to adjust its prediction and scheduling decisions on the fly, similar to conventional feedback-driven optimizations~\cite{FDO}. We will explain the detailed operation of the monitor in the next subsection. Intuitively, it is possible for the performance and energy models to underpredict or overpredict the architecture configuration. Under such circumstances, the monitor can decide to tune the predicted frequency or transition between big and little cores. If the models are deemed completely unusable, the monitor informs the model constructor to recalibrate the models. We now describe some key implementation details of the QoS monitor operations.
+
+\subsection{Scheduler Implementation Details}
+\label{sec:runtime:ebs:sched}
+
+\paragraph{Performance Model} We construct performance models for big and little cores separately. Each model predicts the event handler execution latency under different frequencies. We use the classical DVFS analytical model initially proposed in~\cite{dvfs_model}, and employed in subsequent work, such as~\cite{dvfs_power}:
 \begin{align*}
 Execution\,\,\,time = T_{memory} + N_{dependent}/f
 \end{align*}
 where $f$ is the CPU frequency, $T_{memory}$ is the absolute memory access time that does not change with respect to the CPU frequency, and $N_{dependent}$ is the number of CPU cycles that are not overlapped with the memory accesses.
 
-Strictly speaking, $N_{dependent}$ is a function of $f$. However, precisely constructing a model that varies $N_{dependent}$ with $f$ is complex and introduces a large calibration overhead at runtime. In our experiments, we find that it is feasible and necessary to trade model precision for performance. In particular, we find that treating $N_{dependent}$ as a constant is sufficient in our case. Given this simplification, the model constructor builds the model by profiling twice, one at the maximum frequency and one at the minimum frequency.
+Strictly speaking, $N_{dependent}$ is a function of $f$. However, precisely constructing a model that varies $N_{dependent}$ with $f$ is complex and introduces a large calibration overhead at runtime. In our experiments, we find that it is feasible and necessary to trade model precision for performance. In particular, we find that treating $N_{dependent}$ as a constant is sufficient in our case.
 
-\paragraph{Energy Model} The energy model predicts the energy consumption of an event execution. We construct the energy model based on the performance model and the estimated power consumption. We derive the power estimation of all the core and frequency combinations by performing a profiling run and storing the results in a local power profile file that is read by the Web application upon every launch. Persisting the power profile file aligns with the Android standard~\cite{powerxml}. 
+Given this simplification, the model constructor builds the model with the event latency under two different frequencies by calculating the value of $T_{memory}$ and $N_{dependent}$. The trade-off in choosing the two frequencies is that on one hand using two sufficiently different frequencies provides higher accuracy, since the execution latencies from closer frequencies are more susceptible to measurement noise. But on the other hand, using two frequencies that are extremely high and low may result in execution falling in the  imperceptible or unusable QoS regions, ultimately wasting energy. In our current implementation, we use the highest and the second-highest frequencies to construct the performance model. We find that the run-to-run variation for the data collected using these two frequencies is low, resulting in a robust model.
 
-\paragraph{QoS Monitor's Operation} The QoS monitor constructs a deterministic finite automaton (DFA) for each event to keep track of what architectural configuration it needs to provide. The first two times an event is executed, the QoS monitor informs the model constructor to build the performance and energy models. The models let the monitor predict the architecture configuration during all subsequent executions of the event handler.
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{inputs}
+  \caption{\small{The simplified view of frame lifetime in modern multiprocess/thread browsers. A frame starts when the browser process receives an input event and ends when the frame is displayed and the browser process is signaled. In between, an input event is processed by different stages spread across multiple threads. Different input events might interleave with each other.}}
+  \label{fig:inputs}
+\end{figure}
 
-After the initial model construction, the QoS monitor keeps monitoring event execution in order to perform fine-grained tuning. Specifically, the monitor compares the measured event execution time with the QoS target. The monitor conservatively deems an event's model as overpredicting (or underpredicting) if the measured value is lower than 80\% (or higher than 90\%) of the QoS target. We empirically adopt these two threshold values because they are found to be effective in practice. Using a two-bit saturating counter, the monitor increases the frequency by 100~MHz or transitions from the little core to the big core if the model is underpredicting, or vice versa.
+\paragraph{Frame Latency Tracking} Tracking frame latency is crucial to constructing the performance and energy model. However, accurate frame latency tracking is a nontrivial task, primarily because of the complexities involved in generating a frame in modern Web browsers. Most prior work either is concerned only with the callback latency~\cite{ebs, efetch}, which, as we will show later, contributes to only a portion of frame latency, or it considers logical latency (e.g., the number of conditionals evaluated), which is insufficient to construct the prediction models~\cite{eventbreak}.
+
+Accurately tracking frame latency requires us to understand how a frame is processed internally by a Web browser. Using Google Chrome browser as an example, \Fig{fig:inputs} illustrates a typical frame lifetime, starting from when an input event is received by the browser to when the frame is generated. Although we focus on Chrome, the execution model is generally applicable to almost all modern Web browsers such as Firefox, Safari, Opera, and Internet Explorer.
+
+The browser process receives an input event and sends it to the renderer process, which applies five processing stages to produce a frame: callback execution, style resolution, layout, paint, and composite~\cite{renderingpipeline}. In the end, the browser process receives a signal indicating that the frame is produced. To improve performance, the processing stages are spread across two threads, and some portion of the composite stage could be offloaded to GPU (not shown). Note that our performance model in \Equ{eq:dvfs} captures the GPU processing time.
+
+The key to latency tracking is to accurately attribute a frame to its triggering input. Two complexities of the frame generation process make frame attribution non-trivial. First, different input events might be interleaved. For the example in \Fig{fig:inputs}, Input 2 is triggered before Input 1 finishes. Naively associating an input event with its immediate next frame in this case would mistakenly attribute Frame 1 to Input 2.
+
+Second, one frame might be associated with multiple input events. This is because modern browsers generate a new frame only when the display refreshes, i.e., a VSync signal arrives (typically 60~Hz on a mobile device), to avoid screen tearing~\cite{jankbusting, vsync}. If multiple callback functions have been executed before a VSync arrives, their effects are batched and cause only one frame. The batching is achieved through a \textit{dirty bit}. Each callback sets a dirty bit to indicate whether a new frame is needed as a result of callback execution. Callbacks from different inputs write to the same bit, but as long as one callback sets the dirty bit, a new frame will be generated when the browser later receives a VSync signal.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{tracking}
+  \caption{\small{Frame tracking algorithm. The key idea is to attach each input event with a metadata (\texttt{Msg} in the code) that uniquely identifies an input event and is propagated with the event. We use two colors to represent metadata of two different events in this example.}}
+  \label{fig:tracking}
+\end{figure}
+
+We show the flow of our tracking algorithm in \Fig{fig:tracking}. The key idea is to attach each input event with a piece of metadata (\texttt{Msg} in the code) that is propagated with the event throughout the entire processing pipeline. Each \texttt{Msg} is assigned with an ID that uniquely identifies an input (Part \RNum{1}). To track batched input events, the dirty bit system is augmented with a message queue, which stores \texttt{Msg} metadata of all input events that access the dirty bit after the previous VSync. All messages in the queue get propagated when the VSync signal arrives (Part \RNum{2}). When the browser receives the frame ready signal, it iterates through all the messages propagated with the signal and calculates the frame latency of each input based on their unique ID (Part \RNum{3}).
+
+\paragraph{Energy Model} The energy model predicts the energy consumption of an event handler's execution. We construct the energy model on the basis of the performance model and the estimated power consumption. We derive the power estimation of all the core and frequency combinations by performing a profiling run and storing the results in a local power profile file that is read by the Web browser upon every launch. Persistently storing and looking up the power profile file aligns with the Android standard~\cite{powerxml}. Alternatively, we can dynamically derive the power consumption if power proxy counters, such as Running Application Power Limit (RAPL)~\cite{rapl}, are available and exposed to software. In our case, a rough estimate of the power consumption is sufficient.
+
+\paragraph{QoS Monitor's Operation} The monitor uses deterministic finite automation (DFA) for each event handler to keep track of what architectural configuration it needs to provide for the event handler's execution. The first two times an event handler is executed, the QoS monitor informs the model constructor to build the performance and energy models. This lets the monitor predict the architecture configuration during all subsequent executions of the event handler.
+
+After the initial model construction, the QoS monitor keeps monitoring the event handler's execution in order to perform fine-grained tuning. More specifically, the monitor compares the measured event handler execution latency with the scheduling target. The monitor conservatively deems the event handler's model as overpredicting (or underpredicting) if the measured value is lower than 80\% (or higher than 90\%) of the target latency. We empirically adopt these two threshold values because they are found to be effective in practice. Using a two-bit saturating counter, the monitor then increases the frequency by 100~MHz or transitions from the little core to the big core if model is underpredicting, or vice versa.
 
 The monitor switches from fine-tuning an event handler's execution to recalibrating its model if it detects that the model is not performing well. We use a simple heuristic that is efficient in practice. If the model mispredicts (i.e., either underpredicts or overpredicts) more than four consecutive times, the monitor requests the model constructor to recalibrate.
+
+\paragraph{Overheads} The QoS monitor accounts for scheduling overheads, which consist of two components: the overhead of the scheduling algorithm itself and the overhead of changing the architecture configuration (i.e, big/little core migration and/or frequency scaling). The scheduling algorithm's overhead is dominated by model construction, which only requires solving a two-variable linear system that imposes almost negligible overhead. For changing the architecture's configuration, we assume 100~$\mu$s for frequency scaling and 20~$\mu$s for switching cores, as indicated in~\cite{arm-bl-sw-wp, arm-bl-wp}.
+
+\subsection{Experimental Setup}
+\label{sec:runtime:ebs:setup}
+
+\paragraph{Software Infrastructure} We implement \greenweb and its runtime system in Google's open-source Chromium browser engine, which is used directly in the Chrome browser and is the core of many other popular browsers, such as Opera and Android's default browser. Our implementation is based on Chromium version 48.0.2549.0, which is the most recent version at the time of our work. The modified Chromium runs on unmodified Android version 4.2.2.
+
+\paragraph{Hardware Platform} We use the ODroid XU+E development board~\cite{odroidxue}, which contains an Exynos 5410 SoC that is known for powering the Samsung Galaxy S4. The Exynos 5410 SoC contains a representative ACMP architecture comprising an energy-hungry high-performance (big) core cluster and an energy-conserving low-performance (little) core cluster. The big and little clusters can be individually disabled and enabled. The big cores are ARM Cortex-A15 processors that operate between 800~MHz and 1.8~GHz at a 100~MHz granularity. The little cores are ARM Cortex-A7 processors that operate between 350~MHz and 600~MHz at a 50~MHz granularity. The frequency switching and core migration overhead is 100~$\mu$s and 20~$\mu$s, respectively~\cite{big-little, ebs}.
+
+\paragraph{Energy Measurement}  \greenweb focuses on the processor power consumption because the processor power has been steadily increasing and has gradually become the most significant power consumer in a mobile device compared to other components such as the screen and radio~\cite{mobilecpu}.
+
+We measure the processor power and energy consumption on real hardware as follows. The ODroid XU+E development board has built-in current sense resistors (10 \milli\ohm) for both the big and little cores. We use a National Instrument DAQ Unit X-series 6366 to collect voltage measurements at these sense resistors for the big and small CPU clusters at a rate of 1,000 samples per second, and thereby derive the power consumption. Energy consumption is computed by multiplying power with real execution time (\textit{not} the estimated time from the timing prediction model).
+
+\paragraph{Application Selection} \Tbl{tab:app} shows the applications we use for evaluation. We crawl them using HTTrack~\cite{httrack} and host them on our Web server to enable annotations (discussed later). We acknowledge that the network condition could be slightly better when accessing a local server. However, we believe it has minimal impact because many prior work has shown that computation dominates the performance and energy consumption for today's mobile Web applications~\cite{zhu2015role, huang2012close, big-little}. Overall, these applications cover a wide range of domains such as news, utility, etc., and are mostly among the top 200 websites as ranked by Alexa~\cite{alexa}.
+
+\paragraph{Baseline} We compare \greenweb with two baselines:
+\vspace*{1pt}
+\begin{itemize} \itemsep -1pt
+  \item \textit{Perf} is the policy that always runs the system at the peak performance, i.e., highest frequency in the big core in our setup. It is the standard policy for interactive applications to guarantee the best user QoS experience.
+  
+  \item \textit{Interactive} is Android's default \texttt{interactive} CPU governor designed specifically for interactive usages. It maximizes performance when the CPU recovers from the idle state, and then dynamically changes CPU performance as CPU utilization varies~\cite{android_cpufreq}.
+\end{itemize}
+\vspace*{1pt}
+
+\paragraph{Usage Scenarios} Real-world user study over one year span from the LiveLab project~\cite{livelab} shows that mobile users often have to interact with devices under different battery conditions. Therefore, we evaluate \greenweb under two primary usage scenarios based on battery status:
+\vspace*{1pt}
+\begin{itemize} \itemsep -1pt
+  \item ``Imperceptible'' represents scenarios in which the battery budget is abundant, and users expect high QoS experience. It corresponds to the imperceptible QoS experience discussed in \Sect{sec:qos:target}. The imperceptible performance threshold $T_I$ is used as the QoS target.
+  
+  \item ``Usable'' represents scenarios in which the battery budget is tight and users could tolerate lower performance. It corresponds to the usable QoS experience. The usable performance threshold $T_U$ is used as the QoS target.
+\end{itemize}
+%\vspace*{-3pt}
+
+It is worth noting that \textit{Perf} and \textit{Interactive} behave the same independently of the usage scenario. \greenweb under these two scenarios is denoted by \textit{GreenWeb-I} and \textit{GreenWeb-U}, respectively, in the rest of the evaluation.
+
+\paragraph{Reproducibility} We repeat every experiment that we study 3 times. Unless otherwise mentioned, the results we report are the median of all runs. We find the run-to-run variations are usually about 5\%, and do not affect our conclusions. We use Mosaic~\cite{mosaic}, a UI-level record and replay tool, to ensure consistent user interaction and to reduce human-induced noise across different runs on the same application.
+
+\input{tex/tables/workloads.tex}
+
+\begin{figure*}[t]
+\centering
+\subfloat[QoS violation comparison under the imperceptible usage scenario.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pi_results_f}
+        \label{fig:qos_pi_results_f}
+}
+\\
+\subfloat[QoS violation comparison under the usable usage scenario.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pu_results_f}
+        \label{fig:qos_pu_results_f}
+}
+\caption{Full interaction results. Energy savings are normalized to \textit{Perf}. QoS violations are presented as additional violations on top of \textit{Perf}.}
+\label{fig:full_results}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{energy_results_f}
+\caption{Energy consumption normalized to \textit{Perf}. Lower is better.}
+\label{fig:energy_results_f}
+\end{figure}
+
+
+\subsection{Evaluation}
+\label{sec:runtime:ebs:eval}
+
+\begin{figure*}[t]
+\centering
+\subfloat[Architecture configuration distribution for \textit{GreenWeb-I}.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=1\columnwidth]{freq_dist_pi}
+        \label{fig:freq_dist_pi}
+}\\
+\subfloat[Architecture configuration distribution for \textit{GreenWeb-U}.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=1\columnwidth]{freq_dist_pu}
+        \label{fig:freq_dist_pu}
+}
+\caption{The architecture configuration distribution under the ``imperceptible'' (\textit{GreenWeb-I}) and ``usable''  (\textit{GreenWeb-U}) usage scenario.}
+\label{fig:freq_dist}
+\end{figure*}
+
+In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \greenweb. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
+
+We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
+
+\paragraph{Annotation Effort} To annotate applications for full interaction evaluation, we use a combination of \autogreen and manual annotation. We use \autogreen because of the large amount of events in each application. Automatic annotation greatly improves productivity. However, \autogreen does not always annotate QoS targets correctly because it conservatively assumes short response latency for events with a ``single'' QoS type (see \Sect{sec:auto}). Therefore, we manually correct the QoS target for events that should have a long response latency. The ``Annotation'' column in \Tbl{tab:app} shows that in the end we annotate over 50\% of all events in most applications. Unannotated events are not directly triggered by mobile user interactions and therefore are not the optimization target of \greenweb, as discussed in~\Sect{sec:qos:interaction}.
+
+Overall, it took authors about 5 $\sim$10 minutes to annotate each application with the combined manual and automatic approach. While we are not familiar with each application's codebase, the annotation is not a labor-intensive process. We expect the overhead to be even lower for experienced developers who are more familiar with their own applications.
+
+\paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and \greenweb's two usage scenarios. The results are normalized to \textit{Perf}, and sorted in the ascending order of \textit{GreenWeb-I}. As compared to \textit{Interactive}, \greenweb achieves on average 29.2\% and 66.0\% energy saving under the imperceptible and usable usage scenarios, respectively.
+
+\textit{Interactive} consumes energy close to \textit{Perf} across all applications, indicating that the Android \texttt{Interactive} governor is almost always operating at the peak performance. This is because user interactions, especially events with a ``continuous'' QoS type, typically generate a large volume of frames, which leads to high CPU utilization. \textit{Interactive} responds to the high CPU utilization by increasing CPU performance. With the QoS knowledge provided by developers, however, \greenweb can identify execution configurations that conserve energy while still meeting QoS requirements.
+
+\paragraph{Architecture Configuration Distribution} To better understand the sources of energy savings of \greenweb, we examine the architecture configuration distribution of \greenweb under the imperceptible and usable usage scenario shown in \Fig{fig:freq_dist_pi} and \Fig{fig:freq_dist_pu}, respectively. Bars with darker colors indicate higher performance configurations.
+
+We make two notable observations from the distribution results. First, \greenweb tends to bias toward big core (A15) configurations much more often under the imperceptible scenario (\Fig{fig:freq_dist_pi}) than under the usable scenario (\Fig{fig:freq_dist_pu}). This observation confirms the result that \textit{GreenWeb-I} has less energy saving than \textit{GreenWeb-U}. Second, the fact the \greenweb dynamically changes its execution configuration under different QoS targets indicates that the \greenweb can adapt to different user QoS expectations while saving energy. In contrast, \textit{Interactive} always adopts the same scheduling policy independent of the user QoS expectation, leading to energy waste. This observation indicates that an ACMP architecture is beneficial in mobile Web, but the burden is on the runtime system to intelligently leverage it.
+\begin{figure}[t]
+  \vspace{4pt}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{freq_switch}
+  \caption{\small{Execution configuration switching frequency under \textit{GreenWeb-I} and \textit{GreenWeb-U}. Two configuration switching types exist: CPU frequency switch (solid) and core migrations (stripe).}}
+  \label{fig:freq_switch}
+  \vspace{-6pt}
+\end{figure}
+
+\paragraph{Configuration Switching Frequency} Complementary to the distribution of architecture configuration, \Fig{fig:freq_switch} shows the switching frequency of architecture configuration in \textit{GreenWeb-I} and \textit{GreenWeb-U}. We decompose the configuration switching into two categories: CPU frequency change and core migration (between big and little clusters). Thus, \Fig{fig:freq_switch} is shown as a stacked bar plot where the frequencies of both categories are stacked for each application.
+
+We draw three conclusions from the switching frequency statistics. First, \greenweb introduces only modest configuration switching (20\% on average). Recall from \Sect{sec:eval:setup} that the CPU frequency switching and core migration incur overhead only to the order of $\mu$s, much smaller than the QoS target which is typically to the order of $\milli$s. Therefore, the execution configuration has minimal performance impact.
+
+Second, for most of applications \textit{GreenWeb-I} incurs more switchings than \textit{GreenWeb-U}. This is unsurprising because as compared to \textit{GreenWeb-U}, \textit{GreenWeb-I} optimizes for a tighter QoS target, which is more sensitive to frame (phase) variance and more vulnerable to frame performance mis-prediction. In contrast, a more relaxed QoS target is more robust against frame variance. Our results suggest that a better frame performance predictor such as the profiling-guided prediction~\cite{pgdvfs} would be helpful in reducing the execution configuration switching in the imperceptible mode.
+
+Third, the CPU frequency change dwarfs core migrations and dominates the configuration switching. Thus, fast DVFS is desired. Our results suggest that a fast on-chip voltage regulator that is increasingly prevalent in server processors~\cite{fivr, ivr} is also beneficial in mobile CPUs.
+
+\paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and \greenweb under the imperceptible and usable scenarios, respectively. On average, \greenweb introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in the microbenchmarks because the interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
+
+Compared to \textit{Interactive}, \greenweb has similar, in some cases fewer, QoS violations. Considering the significant energy savings, we conclude that the QoS-aware \greenweb system can use energy more wisely by being aware of user QoS expectations. Overall, \greenweb achieves better energy efficiency than the QoS-agnostic \textit{Interactive} scheme.
 
 \section{Related Work}
 \label{sec:runtime:related}

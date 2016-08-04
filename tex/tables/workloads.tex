@@ -1,0 +1,59 @@
+% !TEX root = paper.tex
+
+\begin{table}[t]
+\Huge
+\centering
+\captionsetup{width=1\columnwidth}
+\caption{\small List of applications. ``Time'' indicates full interaction duration. ``Annotation'' indicates percentage of events that are annotated. ``Events'' indicates the amount of events triggered during full interaction. Note: we only annotate and count events that are directly triggered by mobile user interactions as discussed in \Sect{sec:qos:interaction}. Applications marked with * are manually annotated because they are developed using libraries that \autogreen does not currently support. Their annotation percentage numbers are estimated.}
+\renewcommand*{\arraystretch}{1.2}
+\renewcommand*{\tabcolsep}{6pt}
+\resizebox{1\columnwidth}{!}
+{
+%\begin{tabular}{l l | l c | c c l l}
+%\toprule[0.15em]
+%\bigstrut\textbf{Application} & \bigstrut\textbf{Domain} & \bigstrut\textbf{Interaction Description} & \bigstrut\textbf{\specialcell{Interaction\\Type (LTM)}} & \bigstrut\textbf{\specialcell{~~Lines\\of Code}} & \bigstrut\textbf{\specialcell{~~~Lines of\\Annotation}} & \bigstrut\textbf{QoS Type} & \bigstrut\textbf{\specialcell{QoS Target\\($T_I$, $T_U$)}}\\
+%\midrule[0.05em]
+%Amazon & Shopping & Horizontally swipe the Ads bar to see different Ads. & Moving & 4,300 & 4 & Continuous & (16.6, 33.3) ms\\
+%BBC & News & Load the main webpage. & Loading & 1,734 & 4 & Single & (1, 10) s\\
+%CamanJS & Utility & Tap a button to apply a complex image filter to a photo. & Tapping & 4,910 & 7 & Single & (1, 10) s\\
+%Cnet & News & Tap a button to expand the main menu in animation. & Tapping & 3,687 & 4 & Continuous & (16.6, 33.3) ms\\
+%Craigslist & Search & Scroll the page to find the ``outdoor'' category. & Moving & 800 & 5 & Continuous & (16.6, 33.3) ms\\
+%Paper.js & Utility & Move finger to draw a series of curves. & Moving & 12,276 & 5 & Continuous & (16.6, 33.3) ms\\
+%%http://146.6.28.88/paperjs/examples/Tools/Wave.html
+%Goo & News & Tap news group title to switch to another group. & Tapping & 1,106 & 4 & Continuous & (16.6, 33.3) ms\\
+%Google & Search & Load the main webpage. & Loading & 38 & 4 & Single & (1, 10) s\\
+%MSN & News & Tap to display the menu bar. & Tapping & 1,941 & 6 & Single & (100, 300) ms\\
+%Todo & Utility & Tap to delete all Todo List items. & Tapping & 238 & 6 & Single & (100, 300) ms\\
+%UOL & News & Load the main webpage. & Loading & 25 & 6 & Single & (1, 10) s\\
+%W3Schools & Education & Tap to show the sitemap. & Tapping & 1,382 & 3 & Continuous & (16.6, 33.3) ms\\
+%Whatsapp & Utility & Tap to show the dropdown menu that swipes vertically. & Tapping & 273 & 6 & Continuous & (16.6, 33.3) ms\\
+%Yahoo & News & Scroll the page to find football news. & Moving & 1,139 & 4 & Continuous & (16.6, 33.3) ms\\
+%LZMA-JS & Utility & Tap the button to compress the jQuery library file. & Tapping & 3,297 & 8 & Single & (1, 10) s\\
+%%http://www.html5rocks.com/en/tutorials/speed/txt-compression/#toc-txtfmt
+%%For LZMA-JS, had to modify the original code logic because it uses a setImmediate to call the handler, which forces an additional frame.
+%\bottomrule[0.15em]
+  
+\begin{tabular}{l | c l l | r r r}
+\toprule[0.15em]
+ & \multicolumn{3}{c}\bigstrut\textbf{Micro-benchmarking~~~~~~~~~~~~~~~} & \multicolumn{3}{|c}\bigstrut\textbf{Full Interaction~~~~~~~~~~}\\
+\multirow{2}{*}\bigstrut\textbf{Application}  &  \bigstrut\textbf{Interaction} & \bigstrut\textbf{QoS Type}  & \bigstrut\textbf{QoS Target}  & \bigstrut\textbf{Time}  & \bigstrut\textbf{Events} & \bigstrut\textbf{Annotation}         \\
+\midrule[0.05em]
+BBC          & Loading   & Single        & (1, 10) s          & 0:86    & 60    &  20\%$^*$  \\
+Google       & Loading   & Single        & (1, 10) s          & 0:31    & 26    & 87.5\%       \\
+CamanJS      & Tapping   & Single        & (1, 10) s          & 0:49    & 24    & 100\%    \\
+LZMA-JS      & Tapping   & Single        & (1, 10) s          & 0:53    & 39    & 100\%    \\
+MSN          & Tapping   & Single        & (100, 300) ms      & 0:59    & 126   & 51.2\%    \\
+Todo         & Tapping   & Single        & (100, 300) ms      & 0:26    & 26    & 38.3\%      \\
+Amazon       & Moving    & Continuous    & (16.6, 33.3) ms    & 0:36    & 101   &   33\%$^*$  \\
+Craigslist   & Moving    & Continuous    & (16.6, 33.3) ms    & 0:25    & 22    & 84.6\%      \\
+Paper.js     & Moving    & Continuous    & (16.6, 33.3) ms    & 0:16    & 560    & 100\%   \\
+Cnet         & Tapping   & Continuous    & (16.6, 33.3) ms    & 0:46    & 60    & 55.3\%   \\
+Goo.ne.jp          & Tapping   & Continuous    & (16.6, 33.3) ms    & 0:16    & 23    & 51.8\%    \\
+W3Schools    & Tapping   & Continuous    & (16.6, 33.3) ms    & 0:64    & 59    & 100\%    \\
+\bottomrule[0.15em]
+\end{tabular}
+}
+\label{tab:app}
+%\vspace{-4pt}
+\end{table}
+
