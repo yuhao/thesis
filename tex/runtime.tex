@@ -1,74 +1,229 @@
-%!TEX root=paper.tex
+%!TEX root=../paper.tex
 
 \chapter{WebRT: Smart Web Browser Runtime Optimizing for Energy-Efficiency}
 \label{sec:runtime}
 
 Today's mobile processors are becoming extremely heterogeneous. They often combine general-purpose cores that have different performance and energy characteristics~\cite{single-ISA} (e.g., asymmetric chip-multiprocessor architecture) with special-purpose domain-specific cores (e.g., \webcore). While the hardware upheaval promises performance and energy improvements for the mobile Web, current Web runtime systems are not designed to fully exploit the capability of the underlying hardware. The main bottleneck is that current runtime-architecture interface merely exposes the hardware as a monolithic sequential execution model to the runtime system while hiding many architecture-level details. Without having a full visibility of the hardware details, current Web runtimes often lead to energy-inefficient decisions or violate user QoS requirement.
 
-%While \greenweb APIs specify \textit{what} QoS type and QoS target that users expect, it is the job of the runtime substrate, i.e., the Web browser, to determine \textit{how} user QoS expectations are satisfied in an energy-efficient manner. In the Web stack, the Web browser acts as the runtime system of Web applications by translating and executing Web applications on the fly, similar to what JVM acts with respect to Java applications. Traditional Web browser designs have been primarily focused on functionality, correctness~\cite{atlantis}, and performance~\cite{ParallelBrowser} while largely neglecting its role in energy efficiency optimizations. 
+To bridge the widening gap between the architecture complexity and the architecture-agnostic runtime system, I propose to enhance the existing runtime-architecture interface by exposing architecture details to the Web runtime. I specifically focus on the ACMP architecture~\cite{acmp,single-ISA} as the hardware substrate. ACMP is long known to provide a large performance-energy trade-off space, and is already widely used in today's mobile systems~\cite{big-little-future,exynos5biglittle}. I  quantitatively show that Web applications particularly benefit from the heterogeneity offered by the ACMP architecture to achieve an ideal balance between QoS experience and energy consumption (\Sect{sec:runtime:char}).
 
-To bridge the widening gap between the architecture complexity and the architecture-agnostic runtime system, I propose to enhance the existing runtime-architecture interface by exposing architecture details to the Web runtime. I specifically focus on the ACMP architecture~\cite{acmp,single-ISA} as the hardware substrate. ACMP is long known to provide a large performance-energy trade-off space, and is already widely used in today's mobile systems~\cite{big-little-future,exynos5biglittle}. Leveraging the enhanced interface, I propose \webrt, a Web runtime that minimizes energy while guaranteeing satisfactory user QoS experience by scheduling Web application executions using proper ACMP configurations.
+Leveraging the ACMP architecture, I propose \webrt, a Web runtime that minimizes energy while guaranteeing satisfactory user QoS experience by scheduling Web application executions using proper ACMP configurations. Particularly, I show that we must devise different optimization schemes according to the nature of different user interaction forms. To that end, I introduce a user-application interaction model called LTM. LTM captures three fundamental user interaction forms in mobile Web applications--Loading, Tapping, and Moving--and provides a framework for reasoning about different energy optimization strategies (\Sect{sec:runtime:overview}).
 
-In the rest of this section, I first provide an overview of \webrt (\Sect{sec:runtime:overview}). I discuss that optimizing energy consumption while delivering desirable user experience requires us first to understand the nature of different user interactions and to devise different optimization schemes accordingly. Specifically, I introduce a user-application interaction model called LTM. LTM captures three fundamental user interactions in mobile Web applications--Loading, Tapping, and Moving--and provides a framework for reasoning about different energy optimization strategies. I then describe \webrt's two critical components. The first component is the webpage-aware scheduler that targets the loading (L) process of a Web application (\Sect{sec:runtime:load}), and the second component is the event-based scheduler that targets the touching (T) and moving (M) interactions (\Sect{sec:runtime:ebs}). Finally, I compare the contrast \webrt with prior work on software support for mobile Web (\Sect{sec:runtime:related}).
+I then describe \webrt's two critical components. The first component is the webpage-aware scheduler that targets the loading (L) process of a Web application (\Sect{sec:runtime:load}), and the second component is the event-based scheduler that targets the touching (T) and moving (M) interactions (\Sect{sec:runtime:ebs}). Finally, I compare the contrast \webrt with prior work on software support for mobile Web (\Sect{sec:runtime:related}).
+
+\section{Motivation: Energy-Delay Trade-off}
+\label{sec:runtime:char}
+
+%Our goal in this work is to meet the cut-off latency of webpage loading while minimizing the energy consumption under that constraint whenever possible.  In order to achieve that, we have to carefully balance the performance and energy consumption of webpage loading. Heterogeneous systems with big/little cores each with DVFS capabilities naturally enable a flexible balance between performance and energy due to a large scheduling space.  Different workloads, according to their behaviors, can be scheduled to different cores/frequencies to explore different trade-offs between performance and energy.
+
+%Our goal in this work is to meet the cut-off latency of webpage loading while minimizing the energy consumption under that constraint whenever possible.
+
+An ACMP consists of cores with different computation capabilities--often with different microarchitectures, such as big out-of-order cores and small in-order cores. Each core has a variety of frequency settings. Different core and frequency combinations provide a wide range performance and energy characteristics. The flexibility of an ACMP architecture to make trade-offs between performance and energy consumption leads us to answer a fundamental question: do Web applications benefit from an ACMP heterogeneous systems?  For example, can a processor lower the frequency for a simple webpage to consume less energy but still respect the QoS deadline? Can a webpage originally scheduled on an energy-consuming core be migrated to an energy-saving core without violating the QoS constraint?
+
+We quantitatively answer this question using webpage loading as a case study. The same experimental methodology and conclusion also hold true for other types of interactions in mobile Web applications. We base our measurements and analysis on the 5,000 hottest webpages on the Internet ranked by \website{http://www.alexa.com/}. We show that different webpages require different core and frequency configurations to meet a given deadline of webpage loading while minimizing the energy. This suggests that ACMPs with both big and smalls core, each capable of performing DVFS, are strongly beneficial.
+
+To demonstrate the benefits of such heterogeneous systems, we measure the webpage load time and energy consumption of the 5,000 webpages on the Cortex-A9 and A8 processors (See \Sect{sec:runtime:load:eval} for a detailed experimental setup). We sweep a total of seven configurations available on the big and little cores, i.e., Cortex-A9 with four DVFS settings and A8 with three DVFS settings, respectively. We begin our analysis with four webpages that represent the general trends that we observe (\Sect{sec:runtime:char:representative}), and we subsequently expand our analysis to include the comprehensive set of all webpages (\Sect{sec:runtime:char:comprehensive}).
+% (\website{www.autoblog.com}, \website{www.newegg.com}, \website{www.adobe.com} and \website{www.baidu.com})
+
+\subsection{Representative Analysis}
+\label{sec:runtime:char:representative}
+
+\Fig{fig:pareto} shows the energy versus delay plots for the four representative webpages. Assuming 3~seconds as the cut-off latency for webpage load~\cite{ThreeSecond}, the four webpages have different ideal core and frequency configurations to meet the cut-off while simultaneously minimizing the energy consumption. For example, \website{www.autoblog.com} is a complex website that has 4,235 nodes in the DOM tree, and it therefore requires the highest frequency on the big core to meet the cut-off latency. However, this configuration is overpumped for simpler websites such as \website{www.newegg.com} with 3,152 DOM tree nodes. It only requires 700~MHz of the big core. This suggests that some webpages can benefit from different frequencies in each processor's core.
+
+\begin{figure}[p]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{pareto}
+\caption{Webpages have different ideal execution configurations to meet the cut-off latency while consuming the least energy.}
+\label{fig:pareto}
+\end{figure}
+
+In addition, some webpages can take advantage of scheduling between big/little cores. If only the big core is available, \website{www.adobe.com} can at best be loaded at 700~MHz. Instead, with the little core, the webpage can be loaded using 600~MHz, which still meets the cut-off latency but consumes 75\% less energy than 700~MHz on the big core. Similarly, \website{www.baidu.com} is a search engine website that has very concise content with less than 1~KB of images. It only requires the lowest frequency on the little core.
+
+\subsection{Comprehensive Analysis}
+\label{sec:runtime:char:comprehensive}
+
+We extend our analysis to the full set of 5,000 webpages. \Fig{fig:conf-dist} shows the distribution of ideal core and frequency configurations for different cut-off latencies, ranging from 1~second to 10~seconds at 1~second intervals. Each region in \Fig{fig:conf-dist} represents the portion of webpages that are loaded at the corresponding architectural configuration with minimal energy consumption while still meeting the cut-off latency. We find a wide distribution of ideal configurations, indicating the benefits of a flexible baseline architecture that mixes big/little cores with different frequencies. 
+%For example, if the cut-off latency is 1~s, the big core with its peak frequency can load 52.6\% of the webpages successfully while consuming the least amount of energy compared to all the other configurations.
+
+\begin{figure}[t]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{conf_dist}
+\caption{\small{The distribution of ideal core and frequency configurations under different cut-off latencies.}}
+\label{fig:conf-dist}
+\end{figure}
+
+Assuming a tight 3~second cut-off latency~\cite{ThreeSecond}, a single core with a fixed frequency is insufficient for a wide spectrum of webpages.  The best single core with a fixed frequency is the little core with 600~MHz.  However, it can only load 40.2\% of the webpages within that latency constraint. Even a single core (big or little) with varying frequencies is insufficient. When we consider the little core with varying frequencies, only 74.4\% of webpages can be loaded within the cut-off latency. However, if we use a big core to load all the webpages, then the 74.4\% of webpages have suboptimal performance-energy trade-off. Furthermore, a simple heterogeneous system with both a big and little core but each with a fixed frequency may also cause suboptimal performance-energy trade-off for some webpages. Statistically, the best single-frequency configurations are 700~MHz on the big core and 600~MHz on the little core; yet, a heterogeneous system with only these two settings leads to ideal scheduling for only 52.1\% of the webpages.
+
+Although 3~seconds is the typical cut-off latency on mobile systems, we also study the sensitivity of the ideal configuration distribution under other cut-off latencies. We find that varying cut-off demands also call for a flexible baseline architecture. As \Fig{fig:conf-dist} shows, no one particular configuration consistently performs well under varying cut-off latency requirements. For example, although relaxed cut-offs favor the little core, it is suboptimal for 87.5\% of the webpages under a tight 1~second constraint. Similarly, the big core, which performs very well under tight cut-offs, is overpumped under more relaxed constraints; it is only needed for about 3\% of webpages when the cut-off latency is 10~seconds.
+
+%In conclusion, different webpages have different ideal core and frequency configurations, and can strongly benefit from a versatile heterogeneous system consisting of both big and little cores each capable of performing DVFS.
+In summary, we find that different webpages require different ideal core and frequency settings to achieve the ideal balance between performance and energy-efficiency. Varying cut-off latencies also demand different ideal configurations. Therefore, we conclude that different webpages can strongly benefit from a versatile heterogeneous system consisting of both big and little cores each capable of performing DVFS.
 
 \section{WebRT Overview}
 \label{sec:runtime:overview}
 
 An ACMP consists of cores with different microarchitectures, such as out-of-order and in-order. Each core has a variety of frequency settings. Different core and frequency combinations provide a large trade-off space between performance and energy. The objective of our ACMP-based \webrt is to find an ideal ACMP configuration (i.e., a $\langle core, frequency \rangle$ tuple) that minimizes the energy consumption while guaranteeing an acceptable responsive time when a user interaction happens.
 
-To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms: loading application page (L), tapping the display (T), and moving a finger on the display (M). The three interactions cover a majority of human-computer interactions on mobile devices: every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M).
-%Specifically, moving could be manifested in various ways, such as scrolling, swiping, or even drawing a picture.
+%To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms: loading application page (L), tapping the display (T), and moving a finger on the display (M). The three interactions cover a majority of human-computer interactions on mobile devices: every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M).
 
-The prediction strategy for Loading needs to be different from that for Touching and Moving. The fundamental difference is that Loading occurs only once per usage session while Touching and Moving interactions occur repetitively throughout the entire Web application usage session. As a result, it is possible to make the prediction for the Touching and Moving interactions based on the history information within the same usage session. For Loading, however, every application loading is likely different from the previous one, and as such we can not make predictions based on previous loadings of (potentially different) applications. Instead, we have to make prediction based on the particular content of a given Web application. I now discuss the \webrt component that targets the Loading (\Sect{sec:runtime:load}) and Touching and Moving interactions (\Sect{sec:runtime:ebs}) separately.
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{interaction_model}
+  \caption{The LTM (Loading-Tapping-Moving) user-application interaction model of mobile Web. LTM captures three primitive types of interaction: page loading, finger tapping, and finger moving. We use LTM as a framework to reason about user QoS experience.}
+  \label{fig:interaction}
+\end{figure}
+
+To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms in mobile Web applications: loading application page (L), tapping the display (T), and moving finger on the display (M). \Fig{fig:interaction} illustrates the LTM model.
+
+The three interactions cover a majority of human-computer interactions on mobile devices. This is because every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M). The moving interaction in particular could be manifested in various ways, such as scrolling, swiping, or even drawing a picture. Internally, each user interaction is translated to one or more application event. For example, a tapping interaction is often translated to a \texttt{touchstart} and a \texttt{touchend} event, and a moving interaction can be translated to a \texttt{scroll} event or a \texttt{touchmove} event depending on context. In this paper, we focus on the following events that could be triggered by LTM interactions on a mobile device: \texttt{click}, \texttt{scroll}, \texttt{touchstart}, \texttt{touchend}, and \texttt{touchmove}. We do not consider events specific to desktops (e.g., \texttt{drag}, \texttt{mouseover}) that are generally not fired on mobile devices.
+
+%Each event is bound to a DOM node with a callback function, which is executed when the event is triggered on the associated DOM node. The result of callback execution is fed into the Web browser rendering engine, which eventually paints the resulting frame(s) and updates the display. Frames are what users perceive as application's responses to their interactions, and thus determine the QoS experience.
+
+The runtime optimization strategy for Loading is different from that for Touching and Moving. The fundamental difference is that Loading occurs only once per usage session while Touching and Moving interactions occur repetitively throughout the entire Web application usage session. As a result, it is possible to make the prediction for the Touching and Moving interactions based on the history information within the same usage session. For Loading, however, every application loading is likely different from the previous one, and as such we can not make predictions based on previous loadings of (potentially different) applications. Instead, we have to make prediction based on the particular content of a given Web application. I will discuss the \webrt component that targets the Loading in \Sect{sec:runtime:load} and the component that targets Touching and Moving interactions in \Sect{sec:runtime:ebs} separately.
 
 \section{Webpage-aware Scheduling}
 \label{sec:runtime:load}
 
-\begin{table}[t]
-\centering
-\captionsetup{width=.7\columnwidth}
-\renewcommand*{\arraystretch}{1.05}
-\renewcommand*{\tabcolsep}{20pt}
-\resizebox{.7\columnwidth}{!}{
-\begin{tabular}{ll}
-\toprule[0.15em]
-\multicolumn{1}{l}{\bigstrut\textbf{Category}} & \multicolumn{1}{l}{\textbf{Model Predictors}}\\
-\midrule[0.05em]
-\multicolumn{1}{l}{\multirow{3}{*}{Webpage primitive: HTML}}
-                &       Number of each tag \\
-                &       Number of each attribute\\
-                &       Number of DOM tree node\\
-\midrule[0.05em]
-\multicolumn{1}{l}{\multirow{3}{*}{Webpage primitive: CSS}}
-                &       Number of rules \\
-                &       Number of each selector pattern\\
-                &       Number of each property \\
-\midrule[0.05em]
-\multicolumn{1}{l}{\multirow{2}{*}{Content-dependent}}
-                &       Total image size \\
-                &       Total webpage size \\
-\bottomrule[0.15em]
-\end{tabular}
-}
-\caption{\small Model Predictors}
-\label{tab:feat_list}
-\end{table}
+In this section, I first show that it is possible to predict the webpage load time and energy consumption using merely webpage-inherent characteristics (\Sect{sec:runtime:load:model}). This prediction scheme had two advantages. First, it does not rely on any previous webpage loading history information and is based completely on each webpage's inherent characteristics. Second, the prediction is performed at the webpage parsing time which happens at the very beginning of the loading process, and as such allows enough time for energy optimizations.
 
-In this section, we show that it is possible to predict the webpage load time and energy consumption using merely webpage-inherent characteristics. This prediction scheme had two advantages. First, it does not rely on any previous webpage loading history information and is based completely on each webpage's inherent characteristics. Second, the prediction is performed at the webpage parsing time which happens at the very beginning of the loading process, and as such allows enough time for energy optimizations. Based on such predictions, we propose a webpage-aware scheduler as a \webrt component that predicts the ACMP configuration for webpage loading in order to minimize energy consumption while meeting a specified cut-off latency.
+Based on such predictions, we propose a webpage-aware scheduler as a \webrt component that predicts the ACMP configuration for webpage loading in order to minimize energy consumption while meeting a specified cut-off latency (\Sect{sec:runtime:load:sched}). Real hardware and software measurements show that against a performance-oriented hardware strategy, the webpage-aware scheduler achieves 83.0\% energy savings while violating the cut-off latency for only 4.1\% more webpages. Compared with a more intelligent, on-demand OS DVFS scheduler, the mechanism achieves an additional 8.6\% energy savings along with a 4.0\% performance improvement~(\Sect{sec:runtime:load:eval}).
 
-\paragraph{Model Derivation} We find that regression models provide sufficient accuracy to predict the webpage load time and energy consumption. A regression model is a mathematical function between a set of predictors and a response. Within our context, the response is either the webpage's load time or energy consumption in loading the webpage. The predictors are a set of webpage characteristics. We also require a number of sampling observations to train the model. The linear regression is the basic regression technique and is the premise for advanced ones. Therefore, we first provide fundamentals of linear regression modeling. We then identify the predictors to the model and obtain a set of sampling observations in order to derive the linear model. After that, we describe how the different insights gathered in the previous section on webpage characteristics led us to refine the basic linear model.
+\subsection{Performance and Energy Modeling}
+\label{sec:runtime:load:model}
 
-The linear regression model models a webpage's load time and energy consumption (responses) as a linear combination of various webpage characteristics (predictors), formulated as: $y = \beta_0 + \sum_{i=1}^{p} x_i \beta_i$ where \textit{y} denotes the response, \textit{$x = x_{1},...,x_{p}$} denote \textit{p} predictors, and \textit{$\beta = \beta_{0},...,\beta_{p}$} denote corresponding coefficients of each predictor. The \textit{least squares method} is used to identify the best-fitting $\beta$ that minimizes the residual sum of squares (RSS)~\cite{ESL}.
+\input{tex/tables/feature_list}
 
-We consider two types of predictors. The first type includes the \textit{webpage-inherent} primitives such as the number of HTML tags. In addition, we must also consider the impact of \textit{content-dependent characteristics} such as image size and the total size of a webpage. These characteristics are coarse-grained metrics that are independent of webpage structures but which influence the load time and energy of rendering. We summarize these features in \Tbl{tab:feat_list}. In total, we consider 376 predictors. We require a number of sampling observations to construct the regression models. In total, we obtain 2,500 sampling observations, for which we measure both webpage load time and energy consumption simultaneously on the Cortex-A9 processor running at 1.2 GHz.
+\paragraph{Model Derivation} We find that regression models provide sufficient accuracy to predict the webpage load time and energy consumption. A regression model is a mathematical function between a set of predictors and a response. Within our context, the response is either the webpage's load time or energy consumption in loading the webpage. The predictors are a set of webpage characteristics. The linear regression model models a webpage's load time and energy consumption (responses) as a linear combination of various webpage characteristics (predictors), formulated as: $y = \beta_0 + \sum_{i=1}^{p} x_i \beta_i$ where \textit{y} denotes the response, \textit{$x = x_{1},...,x_{p}$} denote \textit{p} predictors, and \textit{$\beta = \beta_{0},...,\beta_{p}$} denote corresponding coefficients of each predictor. The \textit{least squares method} is used to identify the best-fitting $\beta$ that minimizes the residual sum of squares (RSS)~\cite{ESL}.
 
-We apply a set of techniques to improve the accuracy of the basic linear model. The most significant one is based on the observation that the true relationship between the response and all predictors is strictly linear as assumed by simple linear models.  One effective method to model nonlinearity is to fit data with \textit{restricted spline} functions that are piecewise polynomial functions but which force linear fitting beyond the first and last knots~\cite{ESL}.
+We consider two types of predictors. The first type includes the \textit{webpage-inherent} primitives such as the number of HTML tags. These primitives have show strong inter-webpage differences, and as such have a strong influence on the load time and energy consumption. In addition, we must also consider the impact of \textit{content-dependent} characteristics such as image size and the total size of a webpage. These characteristics are coarse-grained metrics that are independent of webpage structures but which influence the load time and energy of rendering. A media website is a classic example where content-dependent characteristics are dominant. For example, a news website, such as \website{www.bbc.com}, has a relatively stable appearance. Its structural layout (i.e., HTML) and style (i.e., CSS) do not change frequently. However, the website's content is changing daily to keep up with the latest breaking news. For instance, they are constantly updating images, and image sizes have a significant impact on the webpage load time. In our measurement we observe a 4X load time difference between a 200~KB and 50~KB image. Therefore, it is necessary to consider both webpage-primitive and content-dependent characteristics for modeling the load time and energy consumption of webpage load.
+
+We summarize these features in \Tbl{tab:feat_list}. In total, we consider 376 predictors. We require a number of sampling observations to construct the regression models. In total, we obtain 2,500 sampling observations, for which we measure both webpage load time and energy consumption simultaneously on the Cortex-A9 processor running at 1.2 GHz.
  
-\paragraph{Model Evaluation} To validate the model, we obtain 2,500 observations in addition to the 2,500 observations used in deriving the model. Overall, the performance model predicts 73.0\% of the webpages within 10\% error and 94.0\% webpages within 20\% error. Similarly, the energy model predicts 70.0\% of the webpages within 10\% error and 91.8\% webpages within 20\% error. Overall, we find the model accuracy to be acceptable.
+\paragraph{Model Specification and Refinement} We apply various techniques to mitigate overfitting and capture predictor-response nonlinearity to achieve high prediction accuracy. We use R~\cite{R} and its \textit{glmnet} and \textit{rms} packages for all analysis.
 
-\paragraph{Scheduler} During the parsing stage, the webpage-aware scheduler extracts webpage characteristics, and feeds them into the prediction models to estimate the webpage load time and energy consumption under different core and frequency configurations.  On the basis of these predictions, the scheduler then identifies the configuration (if possible) that meets the cut-off latency with minimal energy consumption. If no such configuration is found, the webpage is scheduled to the big core with the highest frequency for the best possible performance.
+We consider a large number of predictors (376) relative to the number of observations (2,500). This is known to produce predictions that result in overfitting~\cite{ESL}. We mitigate this, to the first order, by eliminating predictors that are less correlated to the response. We test the predictor/response correlation strength by calculating the squared correlation coefficient ($\rho^2$) between each predictor variable and observed load time and energy. \Fig{fig:pred-strength} shows the seven most-correlated predictors. For both load time and energy, we find the number of DOM tree nodes (\textsf{\#nodes}) is the most-correlated webpage primitive because it heuristically captures the webpage structure's complexity. Also, both image size and the total webpage size are also correlated because they capture the webpage content. We only select predictors with $\rho^2$ greater than 0.01.
 
-\paragraph{Overheads} The scheduler accounts for scheduling overheads, which consist of two components: the prediction overhead and the overhead of changing the architecture configuration (i.e, big/little core migration and/or frequency scaling). The prediction cost is negligible. We assume an 100~$\mu$s overhead for frequency scaling and a 20~$\mu$s overhead for core migration, as indicated in whitepapers released by ARM~\cite{arm-bl-sw-wp,arm-bl-wp}. Note that the overhead of switching architecture configuration also applies to the event-based scheduling discussed below.
+\begin{figure}[t]
+\subfloat[Predictor-response correlation.]{
+  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{pred-strength-new}
+\label{fig:pred-strength}
+}
+\hspace*{1pt}
+\subfloat[Predictor self-correlation.]{
+  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{all_cor-new}
+\label{fig:all_cor}
+} 
+\caption{Predictor correlations.}
+\label{fig:pred_cor}
+\end{figure}
+
+We further minimize overfitting by pruning features that are correlated to each other.  We test the correlation across predictors left after predictor strength test.  The correlation matrix is shown as a heatmap in \Fig{fig:all_cor}. The intensity of a point in the heatmap is proportional to the magnitude of the correlation coefficient between two predictors. The height of the branches in the dendrogram quantifies this magnitude.
+
+In general, we find two types of correlation: inherent correlation and imposed correlation. Several HTML tags and attributes are functionally defined symbiotically and most often used together, exemplifying the inherent correlation. For example, the $<$\texttt{form}$>$ tag describes a form in the webpage, and the \texttt{action} attribute specifies where to submit the form. These two predictors are almost synchronized with each other, suggesting redundancy. Similar examples are the $<$\texttt{a}$>$ tag and the \texttt{href} attributes, which are defined to specify an external hypertext link. Some other predictors do not bear such an inherent relationship, but web developers use them together to describe related information, such as an image's width and height. For example, CSS properties \texttt{height} and \texttt{width} are highly correlated. The descendant selector pattern and class selector pattern also show heavy correlation for this reason.
+
+Furthermore, it is unlikely that the true relationship between the response and all predictors is strictly linear as assumed by simple linear models.  One effective method to model nonlinearity is to fit data with \textit{restricted spline} functions that are piecewise polynomial functions but which force linear fitting beyond the first and last knots~\cite{ESL}.
+
+\subsection{Model Evaluation}
+\label{sec:model-eval}
+
+To validate the model, we obtain 2,500 observations in addition to the 2,500 observations used for deriving the model. We incrementally evaluate the effect of various refinement techniques described previously by comparing the accuracy of three regression models. First, we evaluate a basic linear regression (L) model that prunes less-significant predictors. Second, we evaluate linear regression with regularization (R) that further prunes predictors correlated with each other. Third, we evaluate a restricted cubic spline-based (RCS) model using pruned features, which captures the nonlinear relationship between predictors and responses. Of all three models, RCS performs best at predicting both load time and energy. We show all three models for completeness of evaluation.
+
+\paragraph{Performance model} The basic linear regression model (L) has a median and mean error rate of 25.8\% and 32.8\%, respectively, indicating a less-desirable prediction. The regularization-based model (R) reduces the median and mean error rate to 11.5\% and 13.6\%, respectively, due to more aggressive predictor pruning. Restricted cubic spline (RCS) modeling predicts the best, with the median and mean error rate of only 5.7\% and 7.5\% due to its capability of capturing more complex relationships between predictors and responses.
+
+We also assess the distribution or prediction errors. \Fig{fig:perf_cdf} shows the results by presenting the cumulative distribution of the error for three modeling methods. Each ($x$, $y$) point in the graph corresponds to the portion of pages ($y$) that are at or below a particular error rate ($x$). Owing to overfitting, L predicts very accurately for a few webpages, but lacks the capability to be generally applicable to a large range of webpages.  As a result, L can only predict 20.0\% of the webpages within 10\% error. In contrast, R mitigates overfitting due to aggressive pruning, and predicts 44.6\% of the webpages within 10\% error. Finally, RCS further captures the nonlinear relationship, and therefore can predict 73.0\% of the webpages within 10\% error, and 94.0\% webpages within 20\% error.
+
+\paragraph{Energy Model} Similar to the load time model, the RCS-based model performs the best, with the median error rate of 6.4\% (mean of 8.2\%), dropping from the median of 12.3\% and 27.1\% for R and L, respectively. \Fig{fig:energy_cdf} shows the cumulative distribution of the error for three modeling methods. For reasons explained earlier, RCS can predict 70.0\% of the webpages within 10\% error (91.8\% within 20\% error), improving from 41.7\% and 18.7\% of R and L, respectively.
+
+\begin{figure}[t]
+\subfloat[Load time model.]{
+    \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{perf_cdf}
+\label{fig:perf_cdf}
+}
+\hspace*{15pt}
+\subfloat[Energy model.]{
+    \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{energy_cdf}
+\label{fig:energy_cdf}
+} 
+\caption{CDF of prediction errors.}
+\label{fig:model_eval}
+\end{figure}
+
+\subsection{Scheduler Implementation}
+\label{sec:runtime:load:sched}
+
+\paragraph{Scheduler} During the parsing stage, which takes \textless 1\% of the total execution time, the webpage-aware scheduler extracts webpage characteristics, and feeds them into the prediction models to estimate the webpage load time and energy consumption under different core and frequency configurations.  On the basis of these predictions, the scheduler then identifies the configuration (if possible) that meets the cut-off latency with minimal energy consumption. If no such configuration is found, the webpage is scheduled to the big core with the highest frequency for the best possible performance.
+
+\paragraph{Scheduling Overhead} We consider two major scheduling overheads: prediction and configuration transitioning. Prediction occurs very rapidly (\textless 3~milliseconds on the Cortex-A9 under 1.2~GHz). Moreover, prediction is interleaved with the parsing stage of the rendering engine. As parsing in modern browsers is highly optimized (e.g., asynchronous with the other processing), the prediction overhead is insignificant. On the basis of our measurements, we assume a constant overhead of 5~milliseconds.
+
+Transitioning between hardware configurations involves the penalty of migrating tasks between big/little cores and/or frequency scaling overhead. The major overhead source of task migration is context switch, i.e. (re)storing architecture state such as register files and configuration registers, as well as warming up the private L1/L2 caches (assuming cache coherency between the last-level cache (LLC) of big and little cores). We assume a constant overhead of 20~milliseconds for state (re)storing per context switch, as indicated for the ARM big.LITTLE system~\cite{big.little}. For private cache warmup penalty, prior work shows that performance often improves when private LLCs of big and little cores are powered on together~\cite{PIE}. Thus, we ignore the warmup penalty. Also, prior work suggested that the power overhead of task migration is <~0.75\%~\cite{TM}. Thus, we do not consider the additional energy consumption of our scheduling mechanism.
+
+For frequency scaling, we assume 0.3~milliseconds as the overhead. The Linux kernel uses this value on both the Cortex-A9 and A8 systems. This value takes into account both hardware (i.e., voltage regulator module switching frequency) and software overhead (i.e., privilege-level switching overhead for the frequency change request). In our evaluation, since we do not know which configuration the web browser is currently running in, we conservatively consider both the configuration transitioning overhead and the frequency scaling overhead at every scheduling point.
+
+\subsection{Evaluation}
+\label{sec:runtime:load:eval}
+
+\paragraph{Energy savings} We compare the webpage-aware scheduling mechanism against an intelligent synthesized OS scheduler that performs on-demand DVFS on a heterogeneous system. The OS scheduler scales the frequency during a webpage load based on simple heuristics of system utilization~\cite{OS_DVFS1,OS_DVFS2}. It samples the CPU usage at a certain period and scales up the frequency if the average CPU usage in the previous sampling period is above a preset threshold, and vice versa. Because no Linux scheduler can yet perform heterogeneous scheduling across big/little cores, we synthesize such a scheduler by running the webpages under the ``on-demand'' cpufreq-governor~\cite{ondemand} on the big core and the little core, individually, and then choose the better result.
+
+We compare the two scheduling techniques with a baseline strategy that consistently yields the best performance. We determine such a baseline by assessing the performance of all the different core and frequency configurations. \Fig{fig:cutoff_cdf} shows the cumulative distribution of webpage load time under each configuration. Each ($x$, $y$) point in the figure represents the portion of webpages ($y$) loaded within a certain delay ($x$). The big core with the peak frequency (1.2~GHz) achieves the best overall performance. It can load 96.5\% of the webpages within 3~seconds. As the frequency and core capability degrade, fewer webpages can be loaded within the same cut-off latency. Therefore, we choose the big core~(A9) with its peak frequency~(1.2~GHz) as the high-performance baseline.
+
+\begin{figure}[t]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{cutoff_cdf}
+\caption{\small{CDF of webpage load time under different configurations.}}
+\label{fig:cutoff_cdf}
+\end{figure}
+
+We evaluate the same 2,500 webpages that we used to assess the accuracy of the regression models. Assuming a 3~second cut-off latency, \Fig{fig:results_energy} shows the boxplot of per-webpage energy savings under the webpage-aware and OS schedulers against the high-performance mode. Both schedulers achieve significant energy savings over the high-performance baseline, with a (geometric) average of 83.6\% and 83.0\%, respectively. This is because both schedulers can schedule webpages to the lower power core or lower frequency.
+
+\begin{figure}[t]
+\subfloat[Distribution of per webpage energy saving against the baseline.]{
+    \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{boxplot}
+\label{fig:results_energy}
+}
+\hspace*{0.15pt}
+\subfloat[Number of webpages that load under the strict cut-off latency of 3~seconds.]{
+    \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{results_cutoff}
+\label{fig:results_cutoff}
+} 
+\caption{\small Evaluation of different scheduling strategies.}
+\label{fig:sched_results}
+\end{figure}
+
+The webpage-aware scheduler has a denser energy-saving distribution toward 100\% than the OS scheduler. This indicates that generally the webpage-aware scheduler achieves higher energy savings. \Fig{fig:webpage-aware} shows the histogram of per-webpage relative energy of the webpage-aware scheduler to the OS scheduler. The webpage-aware scheduler saves energy for about 80\% of the webpages. There are several webpages that are mis-scheduled onto the big core that could have met the cut-off latency with the little core. These webpages consume much higher energy under the webpage-aware scheduler than the OS scheduler (\textgreater 2$X$ in~\Fig{fig:webpage-aware}).  On average, the webpage-aware scheduler reduces energy consumption by 8.6\% compared with the OS scheduler.
+
+\paragraph{Performance impact} Both the OS scheduler and the webpage-aware scheduler trade performance for better energy savings compared with the performance mode. We evaluate their behaviors more critically using the number of webpages that violate the cut-off latency under their operations. This data is shown in \Fig{fig:results_cutoff}. The performance mode violates only 3.5\% of the webpages with a 3~second cut-off latency because it always operates at peak computational capability. Both of the software schedulers perform slightly worse. Our mechanism, the webpage-aware scheduler, results in 7.6\% violations, which is only 0.6\% worse than the OS scheduler. However, on (geometric) average, our mechanism loads webpages 4.0\% faster than the OS scheduler.
+
+\paragraph{Cut-off sensitivity} To assess the webpage-aware scheduler under variable user demands and mobile device conditions, we also experiment with different cut-off latencies. For example, when the end user requests faster webpage load at 2~seconds, the mechanism achieves 7.3\% energy savings over the OS scheduler while violating 4\% fewer webpages. In a battery conservation mode where performance is less critical and the cut-off latency is relaxed to 10~seconds, the webpage-aware scheduler achieves 11.8\% energy savings compared with the OS scheduler while exceeding the cut-off latency for only 0.02\% webpages in total. We conclude that the webpage-aware scheduler is flexible to changing user requirements.
+
+\paragraph{Prediction Accuracy} Scheduling effectiveness relies on the load time and energy prediction accuracy. We study the impact of the prediction accuracy by comparing webpage-aware scheduling with an Oracle scheduler that assumes perfect prediction under the 3~second cut-off latency. There are two types of misprediction: over-prediction causes webpages to load on a more powerful configuration that consumes more energy than the ideal one but does not cause cut-off violation; under-prediction loads webpages on a weaker configuration that consumes less energy but violates the cut-off constraint.  Our models lead to 10\% over-prediction and 4.1\% under-prediction. Compared with the Oracle scheduler, the webpage-aware scheduler results in 4.1\% cut-off violation but ``conserves'' 9.7\% energy.
+
+\paragraph{Analysis} The advantage of the webpage-aware scheduler lies in its awareness of the webpages characteristics and the cut-off latency. As a result, it predicts and chooses a proper, albeit fixed, configuration for each webpage. In contrast, the OS scheduler's DVFS decision is based on the system utilization, which has no direct correlation with the webpage characteristics/cut-off latency and is sensitive to other system activities. Therefore, it may lead to a suboptimal performance-energy trade-off or even miss the cut-off constraint.
+
+For example, when loading \website{www.newegg.com} (top-right in~\Fig{fig:pareto}) under the OS scheduler, we find that the CPU usage on the big core reaches above 95\% for around 40\% of the time and (unnecessarily) incurs peak frequency (i.e. 1.2~GHz).  When in fact, the big core with 720~MHz chosen by the webpage-aware scheduler is sufficient  to meet the 3-second cut-off latency, achieving 20\% energy savings compared with the OS scheduler in our experiments.
+
+However, the flexibility to scale the frequency while loading a webpage sometimes allows the OS scheduler to exploit the marginal value of energy, i.e. a slight increase in energy (through frequency scaling) can bring the webpage back within the cut-off latency that would have been missed if the webpage were loaded using a lower frequency.
+
+For example, \website{www.autoblog.com} (top-left in~\Fig{fig:pareto}) when loaded under 920~MHz (on the big core) just surpasses the 3-second deadline by 0.1 seconds, but has to fall back using 1.2~GHz under the webpage-aware scheduler. At 1.2~GHz, the webpage loads in only 1.8 seconds but consumes 37\% more energy than 920~MHz. However, under the OS scheduler, our statistics show that the OS boosts the frequency above 920~MHz for only around 20\% of the time, and finishes the load in 2.7 seconds. Compared with the webpage-aware scheduler that runs at 1.2~GHz for this webpage, the OS scheduler in this case saves 20\% energy, effectively exploiting the high marginal value of energy.
+
+\paragraph{Discussion} For complete evaluation, we also assess an integrated scheduler that combines the webpage-aware scheduler with OS DVFS. The purpose is to exploit the potentially high marginal value of energy via OS DVFS, but bound the DVFS space to avoid frequencies that are unnecessarily high (wasting energy) or low (missing the cut-off latency).
+
+\begin{figure}[t]
+\subfloat[Relative energy of the webpage-aware scheduler against the OS scheduler.]{
+  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{webpage-aware}
+\label{fig:webpage-aware}
+}
+\hspace*{15pt}
+\subfloat[Relative energy of the integrated scheduler against the webpage-aware scheduler.]{
+  \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{integrated}
+\label{fig:integrated}
+} 
+\caption{Distribution of per-webpage energy comparisons.}
+\label{fig:e_saving}
+\end{figure}
+
+Specifically, the webpage-aware scheduler first restricts the OS DVFS scheduling space to two frequencies: a lower frequency that just meets the cut-off constraint and a upper frequency that just misses the constraint. Given the two frequencies, the webpage-aware scheduler tries to ensure that the cut-off latency can still be met by further tuning the percentage of time spent in either frequency. In practice, we set the \textsf{scaling\_max\_freq} and \textsf{scaling\_min\_freq} of the Linux cpufreq-governor to the lower and upper frequency, respectively. We set the \textsf{up\_threshold} to control when to promote to the higher frequency~\cite{ondemand}. For example, for \website{www.autoblog.com} (top-left in~\Fig{fig:pareto}), the OS DVFS on the big core would only operate on 1.2~GHz and 920~MHz. Because 920~MHz is nearly able to hit the deadline, only a small portion of the webpage load must be run in the upper frequency.  
+
+\Fig{fig:integrated} shows, under a 3 seconds cut-off constraints, the histogram of per webpage relative energy of the integrated scheduler to the webpage-aware scheduler.  The integrated scheduler consistently out-performs the webpage-aware scheduler with 3.0\% average energy savings (up to 30\%).  We leave the full integration and detailed comparison for future work.
 
 \section{Event-based Scheduling}
 \label{sec:runtime:ebs}
