@@ -150,7 +150,7 @@ In order to mitigate the instruction delivery and data communication overhead of
 \centering
 \captionsetup{width=\columnwidth}
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{style-code}
-\caption{\small{Pseudo-code of the \textit{Style} kernel. It consists of a matching phase and an applying phase. SRU accelerates the applying phase, which takes about two-thirds of the \textit{Style} kernel execution time.}}
+\caption{Pseudo-code of the \textit{Style} kernel. It consists of a matching phase and an applying phase. SRU accelerates the applying phase, which takes about two-thirds of the \textit{Style} kernel execution time.}
 \label{fig:style-code}
 \end{figure}
 
@@ -168,7 +168,7 @@ We propose a parallel hardware unit that exploits both RLP and PLP, called the S
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{sru}
-\caption{\small{SRU coupled with scratchpad memories.}}
+\caption{SRU coupled with scratchpad memories.}
 \label{fig:sru}
 \end{figure}
 
@@ -182,18 +182,18 @@ In addition, we noticed that the input to the applying phase, \texttt{matchedRul
 
 \begin{figure}[t]
 \centering
-\subfloat[\small{RLP analysis.}]
+\subfloat[RLP analysis.]
 {
   \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{rlp}
   \label{fig:rlp}
 }
 \hspace*{15pt}
-\subfloat[\small{CSS property analysis.}]
+\subfloat[CSS property analysis.]
 {
   \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{plp}
   \label{fig:plp}
 } 
-\caption{\small Analysis of RLP and CSS properties across webpages.}
+\caption{Analysis of RLP and CSS properties across webpages.}
 \label{fig:para}
 \end{figure}
 
@@ -210,7 +210,7 @@ The SRU can be accessed via a small set of instruction extensions to the general
 \centering
 \captionsetup{width=.8\columnwidth}
 \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{style-code-sru}
-\caption{\small{Pseudo-code of the \textit{Style} kernel with the new API.}}
+\caption{Pseudo-code of the \textit{Style} kernel with the new API.}
 \label{fig:style-code-sru}
 \end{figure}
 
@@ -228,18 +228,18 @@ To further improve the energy-efficiency of date feeding, we propose the browser
 
 \begin{figure}[t]
 \centering
-\subfloat[\small{DOM node reuse behavior.}]
+\subfloat[DOM node reuse behavior.]
 {
 	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{cdf-con-reuse}
 	\label{fig:con-reuse}
 }
 \hspace*{15pt}
-\subfloat[\small{DOM node access hit rate.}]
+\subfloat[DOM node access hit rate.]
 {
 	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{hit-rate}
 	\label{fig:hit-rate}
 } 
-\caption{\small DOM tree access behavior across webpages.}
+\caption{DOM tree access behavior across webpages.}
 \label{fig:dom-loc}
 \end{figure}
 
@@ -264,18 +264,18 @@ We choose to implement the DOM cache as a ``software-managed'' cache--i.e., the 
 
 \begin{figure}[t]
 \centering
-\subfloat[\small{\website{www.sina.com.cn}}]
+\subfloat[\website{www.sina.com.cn}]
 {
 	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{sina}
 	\label{fig:sina}
 }
 \hspace*{15pt}
-\subfloat[\small{\website{www.slashdot.org}}]
+\subfloat[\website{www.slashdot.org}]
 {
 	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{slashdot}
 	\label{fig:slashdot}
 } 
-\caption{\small Representative DOM tree access patterns.}
+\caption{Representative DOM tree access patterns.}
 \label{fig:data-acs}
 \end{figure}
 
@@ -292,7 +292,7 @@ To access a particular DOM tree node in the rendering engine, developers issue~\
 \centering
 \captionsetup{width=\columnwidth}
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{style-code-cache}
-\caption{\small{Using the \texttt{DOMCache\_ST()} API in the rendering engine. The new DOM attribute store API replaces the original attribute value assignment, and performs cache manegement.}}
+\caption{Using the \texttt{DOMCache\_ST()} API in the rendering engine. The new DOM attribute store API replaces the original attribute value assignment, and performs cache manegement.}
 \label{fig:style-code-cache}
 \end{figure}
 
@@ -326,7 +326,7 @@ We use CACTI v5.3~\cite{cacti} to estimate the memory structures overhead. We im
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{sru-perf}
-\caption{\small{Performance and energy improvement of the SRU.}}
+\caption{Performance and energy improvement of the SRU.}
 \label{fig:sru-perf}
 \end{figure}
 
@@ -350,14 +350,14 @@ We apply the SRU to different designs to show its general applicability. For loa
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{cache-energy}
-\caption{\small{Energy savings with a browser engine cache.}}
+\caption{Energy savings with a browser engine cache.}
 \label{fig:cache-energy}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{hit-rate-page}
-\caption{\small{DOM Cache and Render Cache hit rate for desktop webpages.}}
+\caption{DOM Cache and Render Cache hit rate for desktop webpages.}
 \label{fig:hit-rate-page}
 \end{figure}
 
@@ -365,7 +365,7 @@ We apply the SRU to different designs to show its general applicability. For loa
 \centering
 \captionsetup{width=.9\columnwidth}
 \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{cache-perf}
-\caption{\small{Execution time with the browser engine cache of the three designs. Values are normalized to each design's baseline configuration without the browser engine cache.}}
+\caption{Execution time with the browser engine cache of the three designs. Values are normalized to each design's baseline configuration without the browser engine cache.}
 \label{fig:cache-perf}
 \end{figure}
 
