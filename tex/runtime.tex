@@ -328,45 +328,24 @@ We measure the processor power and energy consumption on real hardware as follow
 \paragraph{Application Selection} \Tbl{tab:app} shows the applications we use for evaluation. We crawl them using HTTrack~\cite{httrack} and host them on our Web server to enable annotations (discussed later). We acknowledge that the network condition could be slightly better when accessing a local server. However, we believe it has minimal impact because many prior work has shown that computation dominates the performance and energy consumption for today's mobile Web applications~\cite{zhu2015role, huang2012close, big-little}. Overall, these applications cover a wide range of domains such as news, utility, etc., and are mostly among the top 200 websites as ranked by Alexa~\cite{alexa}.
 
 \paragraph{Baseline} We compare \greenweb with two baselines:
-\vspace*{1pt}
-\begin{itemize} \itemsep -1pt
+\begin{itemize}
   \item \textit{Perf} is the policy that always runs the system at the peak performance, i.e., highest frequency in the big core in our setup. It is the standard policy for interactive applications to guarantee the best user QoS experience.
   
   \item \textit{Interactive} is Android's default \texttt{interactive} CPU governor designed specifically for interactive usages. It maximizes performance when the CPU recovers from the idle state, and then dynamically changes CPU performance as CPU utilization varies~\cite{android_cpufreq}.
 \end{itemize}
-\vspace*{1pt}
 
 \paragraph{Usage Scenarios} Real-world user study over one year span from the LiveLab project~\cite{livelab} shows that mobile users often have to interact with devices under different battery conditions. Therefore, we evaluate \greenweb under two primary usage scenarios based on battery status:
-\vspace*{1pt}
-\begin{itemize} \itemsep -1pt
+\begin{itemize}
   \item ``Imperceptible'' represents scenarios in which the battery budget is abundant, and users expect high QoS experience. It corresponds to the imperceptible QoS experience discussed in \Sect{sec:qos:target}. The imperceptible performance threshold $T_I$ is used as the QoS target.
   
   \item ``Usable'' represents scenarios in which the battery budget is tight and users could tolerate lower performance. It corresponds to the usable QoS experience. The usable performance threshold $T_U$ is used as the QoS target.
 \end{itemize}
-%\vspace*{-3pt}
 
 It is worth noting that \textit{Perf} and \textit{Interactive} behave the same independently of the usage scenario. \greenweb under these two scenarios is denoted by \textit{GreenWeb-I} and \textit{GreenWeb-U}, respectively, in the rest of the evaluation.
 
 \paragraph{Reproducibility} We repeat every experiment that we study 3 times. Unless otherwise mentioned, the results we report are the median of all runs. We find the run-to-run variations are usually about 5\%, and do not affect our conclusions. We use Mosaic~\cite{mosaic}, a UI-level record and replay tool, to ensure consistent user interaction and to reduce human-induced noise across different runs on the same application.
 
 \input{tex/tables/workloads.tex}
-
-\begin{figure*}[t]
-\centering
-\subfloat[QoS violation comparison under the imperceptible usage scenario.]
-{
-        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pi_results_f}
-        \label{fig:qos_pi_results_f}
-}
-\\
-\subfloat[QoS violation comparison under the usable usage scenario.]
-{
-        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pu_results_f}
-        \label{fig:qos_pu_results_f}
-}
-\caption{Full interaction results. Energy savings are normalized to \textit{Perf}. QoS violations are presented as additional violations on top of \textit{Perf}.}
-\label{fig:full_results}
-\end{figure*}
 
 \begin{figure}[t]
 \centering
@@ -375,11 +354,10 @@ It is worth noting that \textit{Perf} and \textit{Interactive} behave the same i
 \label{fig:energy_results_f}
 \end{figure}
 
-
 \subsection{Evaluation}
 \label{sec:runtime:ebs:eval}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \subfloat[Architecture configuration distribution for \textit{GreenWeb-I}.]
 {
@@ -393,15 +371,11 @@ It is worth noting that \textit{Perf} and \textit{Interactive} behave the same i
 }
 \caption{The architecture configuration distribution under the ``imperceptible'' (\textit{GreenWeb-I}) and ``usable''  (\textit{GreenWeb-U}) usage scenario.}
 \label{fig:freq_dist}
-\end{figure*}
+\end{figure}
 
 In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \greenweb. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
 
 We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
-
-\paragraph{Annotation Effort} To annotate applications for full interaction evaluation, we use a combination of \autogreen and manual annotation. We use \autogreen because of the large amount of events in each application. Automatic annotation greatly improves productivity. However, \autogreen does not always annotate QoS targets correctly because it conservatively assumes short response latency for events with a ``single'' QoS type (see \Sect{sec:auto}). Therefore, we manually correct the QoS target for events that should have a long response latency. The ``Annotation'' column in \Tbl{tab:app} shows that in the end we annotate over 50\% of all events in most applications. Unannotated events are not directly triggered by mobile user interactions and therefore are not the optimization target of \greenweb, as discussed in~\Sect{sec:qos:interaction}.
-
-Overall, it took authors about 5 $\sim$10 minutes to annotate each application with the combined manual and automatic approach. While we are not familiar with each application's codebase, the annotation is not a labor-intensive process. We expect the overhead to be even lower for experienced developers who are more familiar with their own applications.
 
 \paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and \greenweb's two usage scenarios. The results are normalized to \textit{Perf}, and sorted in the ascending order of \textit{GreenWeb-I}. As compared to \textit{Interactive}, \greenweb achieves on average 29.2\% and 66.0\% energy saving under the imperceptible and usable usage scenarios, respectively.
 
@@ -410,13 +384,12 @@ Overall, it took authors about 5 $\sim$10 minutes to annotate each application w
 \paragraph{Architecture Configuration Distribution} To better understand the sources of energy savings of \greenweb, we examine the architecture configuration distribution of \greenweb under the imperceptible and usable usage scenario shown in \Fig{fig:freq_dist_pi} and \Fig{fig:freq_dist_pu}, respectively. Bars with darker colors indicate higher performance configurations.
 
 We make two notable observations from the distribution results. First, \greenweb tends to bias toward big core (A15) configurations much more often under the imperceptible scenario (\Fig{fig:freq_dist_pi}) than under the usable scenario (\Fig{fig:freq_dist_pu}). This observation confirms the result that \textit{GreenWeb-I} has less energy saving than \textit{GreenWeb-U}. Second, the fact the \greenweb dynamically changes its execution configuration under different QoS targets indicates that the \greenweb can adapt to different user QoS expectations while saving energy. In contrast, \textit{Interactive} always adopts the same scheduling policy independent of the user QoS expectation, leading to energy waste. This observation indicates that an ACMP architecture is beneficial in mobile Web, but the burden is on the runtime system to intelligently leverage it.
+
 \begin{figure}[t]
-  \vspace{4pt}
   \centering
   \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{freq_switch}
   \caption{\small{Execution configuration switching frequency under \textit{GreenWeb-I} and \textit{GreenWeb-U}. Two configuration switching types exist: CPU frequency switch (solid) and core migrations (stripe).}}
   \label{fig:freq_switch}
-  \vspace{-6pt}
 \end{figure}
 
 \paragraph{Configuration Switching Frequency} Complementary to the distribution of architecture configuration, \Fig{fig:freq_switch} shows the switching frequency of architecture configuration in \textit{GreenWeb-I} and \textit{GreenWeb-U}. We decompose the configuration switching into two categories: CPU frequency change and core migration (between big and little clusters). Thus, \Fig{fig:freq_switch} is shown as a stacked bar plot where the frequencies of both categories are stacked for each application.
@@ -427,6 +400,23 @@ Second, for most of applications \textit{GreenWeb-I} incurs more switchings than
 
 Third, the CPU frequency change dwarfs core migrations and dominates the configuration switching. Thus, fast DVFS is desired. Our results suggest that a fast on-chip voltage regulator that is increasingly prevalent in server processors~\cite{fivr, ivr} is also beneficial in mobile CPUs.
 
+\begin{figure}[t]
+\centering
+\subfloat[QoS violation comparison under the imperceptible usage scenario.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{qos_pi_results_f}
+        \label{fig:qos_pi_results_f}
+}
+\hspace*{15pt}
+\subfloat[QoS violation comparison under the usable usage scenario.]
+{
+        \includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{qos_pu_results_f}
+        \label{fig:qos_pu_results_f}
+}
+\caption{QoS violations are presented as additional violations on top of \textit{Perf}.}
+\label{fig:full_results}
+\end{figure}
+
 \paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and \greenweb under the imperceptible and usable scenarios, respectively. On average, \greenweb introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in the microbenchmarks because the interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
 
 Compared to \textit{Interactive}, \greenweb has similar, in some cases fewer, QoS violations. Considering the significant energy savings, we conclude that the QoS-aware \greenweb system can use energy more wisely by being aware of user QoS expectations. Overall, \greenweb achieves better energy efficiency than the QoS-agnostic \textit{Interactive} scheme.
@@ -434,126 +424,33 @@ Compared to \textit{Interactive}, \greenweb has similar, in some cases fewer, Qo
 \section{Related Work}
 \label{sec:runtime:related}
 
-\paragraph{Single ISA Heterogeneous Scheduling} The particular implementation of \webrt is an example of utilizing single-ISA heterogeneous systems for trading off performance with energy~\cite{single-ISA}. Nvidia's Kal-El~\cite{Tegra3} is a single-ISA heterogeneous system that integrates four high-frequency cores with one low-frequency core. ARM's proposed big.LITTLE system~\cite{big.little} contains an out-of-order Cortex-A15 processor and an in-order Cortex-A7 processor. ACMP architecture is already widely adopted in today's mobile SoCs shipped by major vendors. We expect our \webrt implementation to be readily applicable to commodity mobile hardware.
+We first discuss prior scheduling work on ACMP because the particular implementation of \webrt presented in this work relies on the ACMP architecture (\Sect{sec:runtime:related:sched}). As the goal of \webrt is to save energy without sacrificing performance, we then discuss prior work on improving the performance (\Sect{sec:runtime:related:perf}) and energy consumption (\Sect{sec:runtime:related:energy}).
 
-\webrt's prediction-based scheduling technique is similar to other recent heterogeneous scheduling proposals, such as PIE~\cite{PIE}. However, instead of relying on (micro)architecture- and system-level statistics for prediction, we capture the complex behavior of webpage characteristics using regression modeling, and accurately predict the webpage load time and energy consumption.
+\subsection{Single ISA/DVFS Scheduling}
+\label{sec:runtime:related:sched}
 
-\paragraph{General Software Support for Web Optimizations} Most prior research focus on parallelizing browser tasks, such as parsing, CSS selection, etc.~\cite{ParallelBrowser,FTL,UCI,Parabix}. Although such parallelized algorithms can achieve speedups ranging from 4X to 80X for various browsing tasks, they typically do not scale well beyond four cores with the expense of potential energy inefficiency. Thus, while parallelization has potential in desktop systems, it is less favorable for mobile Web computing.
+The particular implementation of \webrt is an example of utilizing single-ISA heterogeneous systems capable of DVFS for trading off performance with energy~\cite{single-ISA}. Nvidia's Kal-El~\cite{Tegra3} is a single-ISA heterogeneous system that integrates four high-frequency cores with one low-frequency core. ARM's proposed big.LITTLE system~\cite{big.little} contains an out-of-order Cortex-A15 processor and an in-order Cortex-A7 processor. ACMP architecture is already widely adopted in today's mobile SoCs shipped by major vendors such as Samsung and Qualcomm~\cite{exynos5biglittle}. We expect our \webrt implementation to be readily applicable to commodity mobile hardware.
 
-Thiagarajan~et al.~\cite{www-battery} break the Web browser's energy consumption into coarser-grained elements, such as CSS and Javascript behavior, and identify a few system- and application-level optimizations to improve the energy consumption of mobile Web browsing.  The optimizations they recommend, such as reorganizing JavaScript files and removing unnecessary CSS rules, are orthogonal and complementary to our webpage prediction and scheduling work.
-%Other works analyze the power/energy consumption of the entire smartphone\cite{Carroll, Eprof, JamesHotchip}, whereas we focus on improving the energy-efficiency of the mobile processor in response to the demand for high-performance.
+The scheduling mechanism in \webrt differs from existing single-ISA scheduling and DVFS techniques in three key aspects: scheduling \textit{unit}, scheduling \textit{objective}, and scheduling \textit{heuristics}. First, the scheduling unit in existing techniques is either interval based (fixed-instruction interval~\cite{single-ISA, compositecores, tracephase, tm, DVFSPred} or fixed-time interval~\cite{DCS, MIPJ, PIE, ondemand, unfairsched}) or a code segment (e.g., critical sections, lagging threads, application kernels~\cite{acs, bis, uba, YinYang}). The scheduling unit in the \webrt is Web application-specific entities: event handlers in event-based scheduling and webpage loadings in webpage-aware scheduling. These Web application-specific units directly correspond to user interactions and let us directly optimize for user QoS experience.
 
-Another portion of software-level optimizations focuses on improving the execution model of the Web browser through asynchronous/multiprocess rendering, resource prefetching, smarter browser caching, etc.~\cite{pocketweb,Adrenaline,smart-caching,webkit2,firefox-spec_parsing}. All these techniques are orthogonal and can be integrated with my proposal, which primarily focused on the core rendering engine of a Web browser.
+Second, the scheduling objectives in existing techniques are typically architecture-level energy-efficiency metrics such as energy, EDP~\cite{edp}, and million-instructions-per-joule (MIPJ)~\cite{MIPJ}. These metrics trade off raw performance instead of QoS with energy. Therefore, they may lead to executions that fall into the imperceptible or unusable QoS regions and waste energy. On the contrary, \webrt scheduler  aims at minimizing energy consumption under explicit performance constraint in order to guarantee satisfactory QoS experience.
+%In addition, we also propose a metric called QPE, which could be directly used as a scheduling objective for trading off QoS with energy consumption.
 
-%\section{Preliminary Results}
-%\label{sec:runtime:eval}
-%
-%In this section, we present preliminary experiment results of both the event-based scheduling~(\Sect{sec:runtime:eval:ebs}) and the webpage-aware scheduling~(\Sect{sec:runtime:eval:was}).
-%
-%\subsubsection{EBS Results}
-%\label{sec:runtime:eval:ebs}
-%
-%\begin{table}[t]
-%\centering
-%\captionsetup{width=\columnwidth}
-%\caption{\small List of applications. ``Time'' indicates interaction duration. ``Annotation'' indicates percentage of events that are annotated. ``Events'' indicates the amount of events triggered during full interaction. We only annotate and count events that are directly triggered by mobile user interactions.}
-%\renewcommand*{\arraystretch}{1.2}
-%\renewcommand*{\tabcolsep}{12pt}
-%\resizebox{\columnwidth}{!}
-%{
-%\begin{tabular}{l r r r | l r r r}
-%\toprule[0.15em]
-%\bigstrut\textbf{Application}  & \bigstrut\textbf{Time}  & \bigstrut\textbf{Events} & \bigstrut\textbf{Annotation} & \bigstrut\textbf{Application}  & \bigstrut\textbf{Time}  & \bigstrut\textbf{Events} & \bigstrut\textbf{Annotation} \\
-%\midrule[0.05em]
-%BBC          & 0:86    & 60    &  20\%  & Amazon     & 0:36    & 101   &   33\%  \\
-%Google      & 0:31    & 26    & 87.5\%  & Craigslist   & 0:25    & 22    & 84.6\%   \\
-%CamanJS  & 0:49    & 24    & 100\%  & Paper.js     & 0:16    & 560    & 100\%  \\
-%LZMA-JS   & 0:53    & 39    & 100\%  & Cnet          & 0:46    & 60    & 55.3\%  \\
-%MSN          & 0:59    & 126   & 51.2\% & Goo.ne.jp   & 0:16    & 23    & 51.8\%   \\
-%Todo         & 0:26    & 26    & 38.3\%  & W3Schools  & 0:64    & 59    & 100\%    \\
-%\bottomrule[0.15em]
-%\end{tabular}
-%}
-%\label{tab:app}
-%\end{table}
-%
-%\paragraph{Application Selection} \Tbl{tab:app} shows the applications we use for evaluation. We crawl them using HTTrack~\cite{httrack} and host them on our own Web server to enable annotations (discussed later). We acknowledge that the network condition could be slightly better when accessing a local server. However, we believe it has minimal impact because many prior work has shown that computation dominates the performance and energy consumption for today's mobile Web applications~\cite{zhu2015role, huang2012close, big-little}. Overall, these applications cover a wide range of domains such as news, utility, etc., and are mostly among the top 200 websites as ranked by Alexa~\cite{alexa}.
-%
-%We perform a sequence of interactions on each application, and evaluate end-to-end behavior of EBS. Each sequence consists of a mix of touching and moving interactions and contains events with different QoS types and QoS targets. \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
-%
-%We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
-%
-%\begin{figure*}[t]
-%\centering
-%\subfloat[\small{Energy consumptions normalized to \textit{Perf}. Lower is better.}]
-%{
-%  \includegraphics[trim=0 0 0 0, clip, width=0.7\columnwidth]{energy_results_f}
-%  \label{fig:energy_results_f}
-%}\\
-%\subfloat[\small{QoS violation comparison under the imperceptible usage scenario.}]
-%{
-%  \includegraphics[trim=0 0 0 0, clip, width=0.4\columnwidth]{qos_pi_results_f}
-%  \label{fig:qos_pi_results_f}
-%}
-%\hspace*{10pt}
-%\subfloat[\small{QoS violation comparison under the usable usage scenario.}]
-%{
-%  \includegraphics[trim=0 0 0 0, clip, width=0.4\columnwidth]{qos_pu_results_f}
-%  \label{fig:qos_pu_results_f}
-%}
-%\captionsetup{width=.9\columnwidth}
-%\caption{\small Full interaction results. Energy savings are normalized to \textit{Perf}. QoS violations are presented as additional violations on top of \textit{Perf}.}
-%\label{fig:full_results}
-%\end{figure*}
-%
-%\paragraph{Baseline} We compare EBS with two baselines:
-%
-%\begin{itemize}
-%  \item \textit{Perf} is the policy that always runs the system at the peak performance, i.e., highest frequency in the big core in our setup. It is the standard policy for interactive applications to guarantee the best user QoS experience.
-%
-%  \item \textit{Interactive} is Android's default \texttt{interactive} CPU governor designed specifically for interactive usages. It maximizes performance when the CPU recovers from the idle state, and then dynamically changes CPU performance as CPU utilization varies~\cite{android_cpufreq}.
-%\end{itemize}
-%
-%\paragraph{Usage Scenarios} Real-world user study over one year span from LiveLab~\cite{livelab} shows that mobile users often have to interact with devices under different battery conditions. Therefore, we evaluate \webrt under two major usage scenarios based on battery condition:
-%
-%\begin{itemize}
-%  \item ``Imperceptible'' represents scenarios in which the battery budget is abundant and users expect high QoS experience. It corresponds to the imperceptible QoS experience discussed in \Sect{sec:lang:eqos}. The imperceptible performance threshold $T_I$ is used as the QoS target.
-%
-%  \item ``Usable'' represents scenarios in which the battery budget is tight and users could tolerate lower performance. It corresponds to the usable QoS experience. The usable performance threshold $T_U$ is used as the QoS target.
-%\end{itemize}
-%
-%It is worth noting that \textit{Perf} and \textit{Interactive} behave the same independent of the usage scenario. \greenweb under these two scenarios are denoted by \textit{EBS-I} and \textit{EBS-U}, respectively, in the rest of the evaluation.
-%
-%\paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and EBS. The results are normalized to \textit{Perf}. As compared to \textit{Interactive}, EBS achieves on average 21.2\% and 67.5\% energy saving under the imperceptible and usable usage scenarios, respectively.
-%
-%\textit{Interactive} consume energy close to \textit{Perf} across all applications, indicating that the Android \texttt{Interactive} governor is almost always operating at the peak performance. This is because user interactions, especially events with a ``continuous'' QoS type, typically generate a large volume of frames, which leads to high CPU utilization. \textit{Interactive} responds to the high CPU utilization by increasing CPU performance. With the QoS knowledge provided by developers, EBS can identify execution configurations that conserve energy while still meeting QoS requirements.
-%
-%\paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and EBS under the imperceptible and usable scenarios, respectively. On average, EBS introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in microbenchmarks because interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
-%
-%Compared to \textit{Interactive}, EBS has similar, in some cases fewer, QoS violations. Considering the significant energy savings, we conclude that the
-% QoS-aware EBS system can use energy more wisely by being aware of user QoS expectations. Overall, EBS achieves better energy efficiency than the 
-%QoS-agnostic \textit{Interactive} scheme.
-%
-%\subsubsection{Webpage-aware Scheduler Results}
-%\label{sec:runtime:eval:was}
-%
-%We compare the webpage-aware scheduling mechanism against an intelligent synthesized OS scheduler that performs on-demand DVFS on a heterogeneous system. The OS scheduler scales the frequency during a webpage load based on simple heuristics of system utilization~\cite{OS_DVFS1, OS_DVFS2}. It samples the CPU usage at a certain period and scales up the frequency if the average CPU usage in the previous sampling period is above a preset threshold, and vice versa. Because no Linux scheduler can yet perform heterogeneous scheduling across big/little cores, we synthesize such a scheduler by running the webpages under the ``on-demand'' cpufreq-governor~\cite{ondemand} on the big core and the little core, individually, and then choose the better result.
-%
-%\begin{figure}[t]
-%\centering
-%\subfloat[\small{Distribution of per webpage energy saving against the baseline.}]{
-%    \includegraphics[trim=0 0 0 0, clip, width=.3\columnwidth]{boxplot}
-%\label{fig:results_energy}
-%}
-%\hspace*{25pt}
-%\subfloat[\small{Number of webpages that violate a 3-second cut-off latency.}]{
-%    \includegraphics[trim=0 0 0 0, clip, width=.3\columnwidth]{results_cutoff}
-%\label{fig:results_cutoff}
-%}
-%\caption{\small Evaluation of different scheduling strategies.}
-%\label{fig:sched_results}
-%\end{figure}
-%
-%We compare the two scheduling techniques with a baseline strategy that consistently yields the best performance. The baseline configuration is the big core~(A9) with its peak frequency~(1.2~GHz). We evaluate the same 2,500 webpages that we used to assess the accuracy of the regression models. Assuming a 3~second cut-off latency, \Fig{fig:results_energy} shows the boxplot of per-webpage energy savings under the webpage-aware and OS schedulers against the high-performance mode. Both schedulers achieve significant energy savings over the high-performance baseline, with a (geometric) average of 83.6\% and 83.0\%, respectively. This is because both schedulers can schedule webpages to the lower power core or lower frequency. The webpage-aware scheduler has a denser energy-saving distribution toward 100\% than the OS scheduler. On average, the webpage-aware scheduler reduces energy consumption by 8.6\% compared with the OS scheduler.
-%
-%Both the OS scheduler and the webpage-aware scheduler trade performance for better energy savings compared with the performance mode. We evaluate their behaviors more critically using the number of webpages that violate the cut-off latency under their operations. This data is shown in \Fig{fig:results_cutoff}. The performance mode violates only 3.5\% of the webpages with a 3~second cut-off latency because it always operates at peak computational capability. Both of the software schedulers perform slightly worse. Our mechanism, the webpage-aware scheduler, results in 7.6\% violations, which is only 0.6\% worse than the OS scheduler. However, on (geometric) average, our mechanism loads webpages 4.0\% faster than the OS scheduler.
+Third, the webpage-aware scheduler's prediction-based scheduling heuristics is similar to other recent heterogeneous scheduling proposals in the architecture community \cite{PIE,compositecores,tracephase,tm}. In contrast, instead of relying on (micro)architecture- and system-level statistics for prediction, the webpage-aware scheduler captures the complex behavior of webpage characteristics using regression modeling, and accurately predicts the webpage load time and energy consumption.
+
+Timer coalescing~\cite{powerinosx} used in OS X Mavericks also exploits the performance slack for energy savings, similar to our event-based scheduling. It postpones noncritical timers and coalesces them for batch executions to increase the processor idle time for energy savings. However, timer coalescing applies only to timers in Apple's native applications (or OS processes), whereas our EBS framework is not limited to timer events, but can apply to any event-driven applications.
+
+\subsection{Web Performance Optimizations}
+\label{sec:runtime:related:perf}
+
+Most prior research focus on parallelizing browser tasks, such as parsing, CSS selection, etc.~\cite{ParallelBrowser,FTL,UCI,Parabix}. Although such parallelized algorithms can achieve speedups ranging from 4X to 80X for various browsing tasks, they typically do not scale well beyond four cores with the expense of potential energy inefficiency. Thus, while parallelization has potential in desktop systems, it is less favorable for mobile Web computing.
+
+Another portion of performance optimizations focuses on improving the execution model of the Web browser through asynchronous/multiprocess rendering, resource prefetching, smarter browser caching, etc.~\cite{pocketweb,Adrenaline,smart-caching,webkit2,firefox-spec_parsing}. All these techniques are orthogonal and can be integrated with my proposal, which primarily focused on the core rendering engine of a Web browser.
+
+\subsection{Web Energy Optimizations}
+\label{sec:runtime:related:energy}
+
+Thiagarajan~et al.~\cite{www-battery} break the Web browser's energy consumption into coarser-grained elements, such as CSS and Javascript behavior, and identify a few system- and application-level optimizations to improve the energy consumption of mobile Web browsing.  The optimizations they recommend, such as reorganizing JavaScript files and removing unnecessary CSS rules, are orthogonal and complementary to our webpage prediction and scheduling work. Other works analyze the power/energy consumption of the entire smartphone\cite{Carroll, Eprof, JamesHotchip}, whereas we focus on improving the energy-efficiency of the mobile processor in response to the demand for high-performance.
+
+Another body of energy-related research focuses on diagnosing energy bugs and hogs in mobile applications. These techniques either completely kill an energy-hungry application~\cite{carat} or require developers to improve manually the energy efficiency~\cite{energygreedapis, eprof, eLens}. \webrt eases developers' effort by automatically optimizing for energy efficiency.
+
