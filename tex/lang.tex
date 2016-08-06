@@ -1,28 +1,26 @@
-%!TEX root=paper.tex
+%!TEX root=../paper.tex
 
 \chapter{GreenWeb: Web Language Extensions for Energy-Efficient Web Computing}
 \label{sec:lang}
 
 %Web application developers today must be conscious of energy efficiency. Current abstractions between software and hardware, however, do not provide developers opportunities to optimize for energy efficiency. Instead, energy optimizations are mostly conducted at the hardware and OS level via techniques such as dynamic voltage and frequency scaling. Although effective from a hardware perspective, the key limitation of these techniques is that they are not aware of user quality-of-service (QoS) expectation and may lead to poor experience~\cite{big-little, ebs, pgdvfs}. Failing to deliver desirable QoS experience can cause severe consequences. For example, a 1-second delay in webpage load time costs Amazon \$1.6 billion annual lost in sales~\cite{Eaton:2013uq}.
 
-Web languages are at the interface between applications and Web runtime. Traditionally, Web developers use Web languages to express structure, style, and functionality of an application while relying on the underlying system to perform energy optimizations without compromising user QoS experience. However, without being informed with the QoS information, the runtime system might not always effectively reason about the trade-off between QoS and energy consumption.
+Web languages are at the interface between applications and Web runtime. Traditionally, Web developers use Web languages to express structure, style, and functionality of an application while relying on the underlying system to perform energy optimizations without compromising user QoS experience. However, as mobile users become increasingly aware of poor energy behavior of applications~\cite{badappreviews,appdeletion}, Web developers today must be  explicitly conscious of energy efficiency. Current programming language abstractions, however, provide developers few opportunities to optimize for energy efficiency. Instead, energy optimizations are mostly conducted at the hardware and OS level via techniques such as dynamic voltage and frequency scaling. Although effective from a system perspective, the key limitation of these techniques is that they are not aware of user quality-of-service (QoS) expectations and may lead to poor experience~\cite{big-little,ebs,pgdvfs}. Failing to deliver a desirable QoS experience can cause severe consequences. For example, a 1-second delay in webpage load time costs Amazon \$1.6 billion annual sales lost~\cite{Eaton:2013uq}.
 
-To better guide runtime optimizations, I present \greenweb, a set of Web language extensions that allow Web developers to express user QoS expectation at an abstract level. Based on the programmer-guided QoS information, the runtime substrate of \greenweb could then dynamically determine how to deliver the target QoS experience while minimizing the energy consumption.
+To better guide runtime optimizations, I present \greenweb, a set of Web language extensions defined as Cascading Style Sheet (CSS) rules that allow Web developers to express user QoS expectation at an abstract level. Based on the programmer-guided QoS information, the runtime substrate of \greenweb could then dynamically determine how to deliver the target QoS experience while minimizing the energy consumption.
 
-%To help Web developers easily express QoS information in Web applications, our \textit{key insight} is that user QoS experience can be sufficiently captured by two fundamental abstractions: \textit{QoS type} and \textit{QoS target}. Intuitively, QoS type characterizes whether users perceive QoS experience by ``interaction responsiveness'' or ``animation smoothness'', and QoS target denotes the performance level that is required to deliver a desirable user experience for a specific QoS type. \greenweb provides specific language constructs for expressing the two QoS abstractions and thus empowering Web developers to provide ``hints'' to guide energy optimizations.
-
-In this section, I first discuss the relationship between QoS, performance, and energy consumption. It lays the foundation of abstracting user QoS experience~(\Sect{sec:lang:eqos}). I then introduce QoS type and QoS target as two fundamental abstractions that capture two critical aspects of user QoS experience~(\Sect{sec:lang:abst}). I then present the design and specification of \greenweb, a group of Web language extensions that allows developers to easily express the two QoS abstractions~(\Sect{sec:lang:spec}). I further discuss the relationship between the \greenweb extensions and the \webrt runtime~(\Sect{sec:lang:inter}), and argue that \greenweb and \webrt are synergistic while independent. Finally, I discuss \greenweb in the general context of language support for performance and energy-efficiency~(\Sect{sec:lang:related}).
+The rest of this chapter is organized as follows. \Sect{sec:lang:eqos} discusses the relationship between QoS, performance, and energy consumption. It lays the foundation of abstracting user QoS experience. \Sect{sec:lang:abst} defines two abstractions that are critical to mobile user QoS experience, and \Sect{sec:lang:spec} describes the proposed \greenweb language constructs that express the two abstractions. \Sect{sec:lang:auto} presents \autogreen to demonstrate the feasibility of automatically applying \greenweb annotations to a Web application. \Sect{sec:lang:inter} discusses the relationship between the \greenweb extensions and the \webrt runtime, and argue that \greenweb and \webrt are synergistic while independent. \Sect{sec:lang:disc} discusses the implications and limitations of the current design and implementation of \greenweb. Finally, \Sect{sec:lang:related} puts \greenweb in the general context of language support for performance and energy-efficiency.
 
 \section{Trade-off Between QoS, Performance, and Energy}
 \label{sec:lang:eqos}
 
 We illustrate the relationship between application QoS, performance, and energy savings in~\Fig{fig:eqos}. Performance degrades from left to right on the~\textit{x}-axis. The left and right~\textit{y}-axes indicate QoS and energy savings, respectively. Foundational work in human-computer interaction research~\cite{eventlatency,designUI,info_vis,response_time,percent_done,usability_engineering} indicates that interactive application QoS can be classified into three distinct states as machine performance degrades: \textit{imperceptible} $[P_H,P_I]$, \textit{tolerable} $(P_I,P_U]$, and \textit{unusable} $(P_U,P_L]$.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
-\captionsetup{width=.7\columnwidth}
-\includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{eqos}
-\caption{\small{The interplay between QoS, performance, and energy.}}
+\captionsetup{width=.9\columnwidth}
+\includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{eqos}
+\caption{The interplay between QoS, performance, and energy.}
 \label{fig:eqos}
 \end{figure}
 
@@ -33,124 +31,134 @@ In summary, QoS-aware energy-efficiency optimization implies one of the followin
 \section{QoS Abstractions for Web Applications}
 \label{sec:lang:abst}
 
-Abstracting user QoS experience is the prerequisite in expressing QoS information in a programming language. Based on the understanding of the interplay between QoS and energy consumption, I propose the QoS type and QoS target abstractions. I discuss why they are necessary and sufficient to capture user QoS experience for QoS-aware energy-efficiency optimizations.
+Expressing user QoS experience to the underlying system is the key in QoS-aware energy efficiency optimizations. However, today's Web languages do not allow expressing QoS information. Programmers need new \textit{abstractions}. We propose two abstractions, QoS type and QoS target, that capture two fundamental aspects of user QoS experience in Web applications. Such QoS abstractions hide the complexity of the specific application implementation from underlying systems while still providing enough details to guide energy optimizations. This section introduces the abstractions, and the next section~(\Sect{sec:lang:spec}) describes the proposed language constructs that enable programmers to express the abstractions.
 
-\paragraph{QoS Type} We define an abstraction called \textit{QoS type} to capture different ways that users interpret QoS experience. Two major QoS types exist: \textit{single} and \textit{continuous}. Intuitively, they indicate whether the QoS experience is determined by the ``responsiveness'' of a single frame or the ``smoothness'' of a continuous sequence of frames, respectively. Alternatively, one can think of QoS type as the metric of concretizing performance ($x$-axis) in \Fig{fig:eqos}.
+Abstracting user QoS experience requires us to first understand how users assess QoS experience in mobile Web applications. To that end, we leverage the LTM user-application interaction model described in \Sect{sec:runtime:overview}. The LTM model captures three fundamental user interactions in mobile Web applications (Loading-Tapping-Moving) and gives us a framework for reasoning about user QoS experience. Based on the LTM model, we propose the QoS type~(\Sect{sec:lang:abst:type}) and QoS target~(\Sect{sec:lang:abst:target}) abstractions. We discuss why they are necessary and sufficient to express QoS information for QoS-aware energy efficiency optimizations.
 
-\begin{itemize}
-\item Some user interactions produce only a single frame, which we call the response frame. The QoS type of these interactions is ``single,'' indicating that user QoS experience is determined by the latency at which the response frame is perceived by users~\cite{eventlatency}. For instance, imagine a fingertap interaction that opens a search box in a Web application. Users perceive the effect of the fingertap when the application displays a response frame---the frame with the search box displayed. Web application loading process also falls in this category. This is because although there are several intermediate frames being produced during the loading process, user QoS experience is largely determined by the latency to deliver the ``first meaningful frame''~\cite{fmf}, which indicates that a Web application is usable to users.
+\subsection{QoS Type}
+\label{sec:lang:abst:type}
 
-\item The other QoS type is ``continuous,'' corresponding to interactions whose responses are not one single frame but a sequence of continuous frames. User QoS experience is determined by the latency of \textit{each} frame in the sequence, rather than one particular frame.
+We define an abstraction called \textit{QoS type} to capture different ways that users interpret the QoS experience. Two major QoS types exist: \textit{single} and \textit{continuous}. Intuitively, they indicate whether the QoS experience is determined by the ``responsiveness'' of a single frame or the ``smoothness'' of a continuous sequence of frames, respectively. Let us use the LTM model to elaborate on the two QoS types.
 
-Continuous frames are often found in the form of animations. The simplest form of animation is triggered by finger moving such as scrolling. Tapping can also cause a sequence of frames to be generated. For instance, many Web applications provide a navigation button that dynamically expands when tapped and generates an animation. More complex animations in Web applications can be controlled by \texttt{requestAnimationFrame} (\texttt{rAF}) APIs~\cite{animationtiming} and CSS animation/transition~\cite{cssanimations,csstransitions}.
-\end{itemize}
+\input{tex/tables/qos}
 
-QoS type is an important abstraction because optimizing for a wrong QoS type may lead to energy-inefficient decisions. For example, imagine a fingtertap that only produces one frame  (e.g., displaying a search box). A Web runtime that mistakenly optimizes for ``continuous'' frame latency may force the hardware to run at its peak performance in order to produce frames even when no frame is intended, leading to energy waste. ``Single'' and ``continuous'' are two unique QoS types that must be differentiated.
+\paragraph{Single} Some user interactions produce only a single frame, which we call the response frame. The QoS type of these interactions is ``single,'' indicating that user QoS experience is determined by the latency at which the response frame is perceived by users~\cite{eventlatency}. For instance, imagine a fingertap interaction (T) that opens a search box in a Web application. Users perceive the effect of the fingertap when the application displays a response frame---the frame with the search box displayed. Web application loading process (L) also falls in this category. This is because although there are several intermediate frames being produced during the loading process, user QoS experience is largely determined by the latency of the ``first meaningful frame''~\cite{fmf}, which indicates that a Web application is usable by users.
 
+Under the ``single'' QoS type, an ideal energy-efficient system would allocate just enough energy to produce the single response frame and conserve energy afterwards. It is worth noting that the system might not be completely idle after the response frame is delivered. The system could still perform work such as updating the browser cache, performing garbage collection, or rasterizing off-screen pixels. Such ``post-frame'' work is not critical to user QoS experience and could be executed in a low-power mode.
 
-\begin{table}[t]
-\Huge
-\centering
-\captionsetup{width=.6\columnwidth}
-\caption{\small Mobile Web interactions fall into three categories based on different QoS type and QoS target combinations.}
-\renewcommand*{\arraystretch}{1.2}
-\renewcommand*{\tabcolsep}{12pt}
-\resizebox{.6\columnwidth}{!}
-{
-  \begin{tabular}{l l l}
-  \toprule[0.15em]
-  \bigstrut\textbf{QoS Type} & \bigstrut\textbf{\specialcell{QoS Target\\($P_I$, $P_U$)}} & \multicolumn{1}{c}{\bigstrut\textbf{~~~~~~~~~~~Description}}\\
-  \midrule[0.05em]
-  Continuous & (16.6, 33.3) ms & \specialcell{QoS experience is evaluated\\by \textit{continuous} frame latencies.} \\
-  \midrule
-  \multirow{2}{*}[-33pt]{Single} & (100, 200) ms & \specialcell{QoS experience is evaluated by
-\\a \textit{single} frame latency. Users
-\\expect \textit{short} response period.} \\
-  & (1, 10) s & \specialcell{QoS experience is evaluated by
-\\a \textit{single} frame latency. Users
-\\expect \textit{long} response period.} \\
-  \bottomrule[0.15em]
-  \end{tabular}
-}
-\label{tab:qos_info}
-\end{table}
+\paragraph{Continuous} The other QoS type is ``continuous,'' corresponding to interactions whose responses are not one single frame but a sequence of continuous frames. User QoS experience is determined by the latency of \textit{each} frame in the sequence rather than one specific frame as in the ``single'' case. Ideally, an energy-efficient Web runtime would allocate just enough energy for each frame in the sequence and conserve energy after all the frames are produced.
+%Determining the exact sequence of frames given an input event is a non-trivial task and we discuss it in \Sect{sec:runtime:frame}.
 
-\paragraph{QoS Target} Another critical QoS abstraction is \textit{QoS target}, denoting the performance level needed to deliver a certain QoS experience. Two different QoS targets exist that are critical to user experience: imperceptible target ($P_I$) and usable target ($P_U$)~\cite{ebs}. They correspond to the imperceptible and usable QoS experience discussed in \Fig{fig:eqos}. We use frame latency as a natural choice for the performance metric because frame updates dictate QoS experience. Specifically, we define frame latency as the delay from when an event is initiated by a user to when its corresponding frame(s) show on the display.
+Continuous frames are often found in the form of animations. The simplest form of animation is triggered by finger moving (M) such as scrolling. Tapping (T) can also cause a sequence of frames to be generated. For instance, many Web applications provide a navigation button that dynamically expands when tapped and generates an animation. More complex animations in Web applications can be controlled by \texttt{requestAnimationFrame} (\texttt{rAF}) APIs~\cite{animationtiming} and CSS animation/transition~\cite{cssanimations,csstransitions}.
 
-\begin{itemize}
-\item For interactions with a ``single'' QoS type, QoS target depends on the complexity of the interaction~\cite{eventlatency}. For interactions that are expected to finish quickly, user latency tolerance is low. For instance, a fingertap that displays a search box falls into this category because displaying a search box is inherently expected to finish ``instantly.'' For these ``lightweight'' interactions, users feel the system is responding instantly at 100~ms, and start thinking that the system is not working after 300~ms~\cite{humanperception}. Thus, 100~ms and 300~ms can be used as the $P_I$ and $P_U$ values, respectively.
+Distinguishing between ``continuous'' and ``single'' is important. If an event callback triggers an animation but the runtime treats its QoS type as ``single'', the runtime would optimize for only the first frame in the sequence, and thus mis-operates for the remaining frames. On the other hand, if an event produces only a single frame followed by some ``post-frame'' work, a runtime (mistakenly) optimizing for ``continuous'' frame latency would force the hardware to run at the peak performance to execute the ``post-frame'' work (with the intention of generating more frames), leading to energy waste. Whether an event triggers a single frame or a sequence of frames can not be determined a priori. In \Sect{sec:lang} we will introduce a set of language extensions that let developers explicit specify an event's QoS type, through which the runtime could be better informed in optimizations.
 
-In contrast, when users are aware of a computationally intensive job being processed, they tend to have high tolerance for latencies~\cite{usability_engineering}. Psychology studies show that users can subconsciously wait up to 1 second for a job to complete while still staying focused on the current train of thought. Once a job execution exceeds 10 seconds, user attentions are distracted and cannot tolerate the delay~\cite{info_vis,response_time}. Therefore, 1 second and 10 seconds can be treated as the $P_I$ and $P_U$ values for ``heavyweight'' interactions, respectively.
+\subsection{QoS Target}
+\label{sec:lang:abst:target}
 
-\item For interactions with a ``continuous'' QoS type, 60 and 30 frames per second (FPS) deliver a ``seamless'' and ``just playable'' user experience, respectively~\cite{fps_target}. Thus, a performance level that guarantees 16.6~ms and 33.3~ms frame latency can be regarded as the imperceptible and usable QoS target, respectively. It is worth noting that the QoS target applies to each frame rather than an average latency. This is because human eyes are very sensitive to frame variance. Tiny hitches in a high volume of frames can cause a poor QoS experience and even headaches~\cite{jankbusting,adaptivevsync}.
-\end{itemize}
+Another critical QoS abstraction is \textit{QoS target}, denoting the performance level needed to deliver a certain QoS experience. We use frame latency as a natural choice for the performance metric because frame updates dictate QoS experience. Specifically, we define frame latency as the delay from when an event is initiated by a user to when its corresponding frame(s) show on the display.
 
-User interactions fall into three distinct categories based on different QoS type and QoS target combinations as listed in \Tbl{tab:qos_info}. Although the absolute values of QoS target ($P_I$ and $P_U$) in each category can vary slightly with user perceptibility, their magnitudes differ significantly across categories (i.e., tens of milliseconds versus hundreds of milliseconds versus seconds). Thus, QoS target is an important abstraction to differentiate different performance requirements.
+Two different QoS targets exist that are critical to user experience: imperceptible target ($P_I$) and usable target ($P_U$)~\cite{ebs}. Imperceptible target delivers a latency that is imperceptible/instantaneous to users. Achieving a performance higher than $P_I$ does not add user perceptible value while unnecessarily wasting energy. The usable target, in contrast, corresponds to a latency that can barely keep users engaged. Delivering a performance lower than $P_U$ may cause users to deem an application unusable and even abandon it.
+
+\paragraph{Single} For interactions with the ``single'' QoS type, QoS target depends on the complexity of the interaction~\cite{eventlatency}. For interactions that are expected to finish quickly, user latency tolerance is low. For instance, a fingertap that displays a search box falls into this category, because displaying a search box is inherently expected to finish ``instantly.'' For these ``lightweight'' interactions, users feel the system is responding instantly at 100~ms, and start thinking that the system is not working after 300~ms~\cite{humanperception}. Thus, 100~ms and 300~ms can be used as the $P_I$ and $P_U$ values, respectively.
+
+In contrast, when users are aware of a computationally intensive job being processed, they tend to have high tolerance for latencies~\cite{usability_engineering}. Psychological study shows that users can subconsciously wait up to 1 second for a job to complete while still staying focused on the current train of thought. Once a job execution exceeds 10 seconds, user attentions are distracted and cannot tolerate the delay~\cite{info_vis,response_time}. Therefore, 1 second and 10 seconds can be treated as the $P_I$ and $P_U$ values for ``heavyweight'' interactions, respectively.
+
+\paragraph{Continuous} For interactions with a ``continuous'' QoS type, 60 and 30 frames per second (FPS) deliver a ``seamless'' and ``just playable'' user experience, respectively~\cite{fps_target}. Thus, a performance level that guarantees 16.6~ms and 33.3~ms frame latency can be regarded as the imperceptible and usable QoS target, respectively. It is worth noting that the QoS target applies to each frame rather than an average latency. This is because human eyes are very sensitive to frame variance. Tiny hitches in a high volume of frames can cause a poor QoS experience and even headaches~\cite{jankbusting,adaptivevsync}.
+
+User interactions fall into three distinct categories based on the different QoS type and QoS target combinations as listed in \Tbl{tab:qos_info}. Although the absolute values of QoS target ($P_I$ and $P_U$) in each category can vary slightly with user perceptibility, their magnitudes differ significantly across categories (i.e., tens of milliseconds versus hundreds of milliseconds versus seconds). Thus, QoS target is an important abstraction to differentiate different performance requirements.
 
 \section{QoS-Aware Web API Design}
 \label{sec:lang:spec}
 
-%\begin{figure}[t]
-%  \centering
-%  \captionsetup{width=.6\columnwidth}
-%  \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{syntax}
-%  \caption{\small{The syntax of \greenweb language extensions.}}
-%  \label{fig:syntax}
-%\end{figure}
-%CSS syntax for reference
-%http://www.w3.org/TR/2003/WD-css3-syntax-20030813/
-%http://www.w3.org/TR/CSS21/grammar.html
-%https://developer.mozilla.org/en-US/docs/Web/CSS/Value_definition_syntax
+We now present \greenweb, a set of Web language extensions that lets application developers easily express the two QoS abstractions as program annotations. We first discuss the design principles of \greenweb extensions (\Sect{sec:lang:spec:principles}). We then describe the design and specification of \greenweb~(\Sect{sec:lang:spec:api}). We then present usage scenarios to demonstrate the expressiveness and modularity of the \greenweb design~(\Sect{sec:lang:spec:ex}).
 
-We present \greenweb, a set of Web language extensions that lets application developers easily express the two QoS abstractions as program annotations. \greenweb APIs extend current CSS language to specify QoS type and QoS target information. We choose CSS because its syntax and semantics naturally allow us to select DOM elements and specify various characteristics. The core of CSS is a set of \textit{style rules} \cite{css21}. Each style rule selects specific Web application elements and sets their style properties. A style rule expresses such semantics through two language constructs: a \textit{selector}, which selects specific Web application elements, and a set of style \textit{declarations}, which are $\langle property, value \rangle$ pairs that assign $value$ to $property$. As an example, the following CSS rule \texttt{h1 \{font-weight: bold\}} selects all the \texttt{h1} elements and sets their \texttt{font-weight} property to \texttt{bold}.
+\subsection{Design Principles}
+\label{sec:lang:spec:principles}
 
-%Traditionally, CSS supports only pure visual style properties such as fonts and colors. Recent development of CSS languages (e.g., CSS3~\cite{mdncss3}) lets developers express richer information such as controlling animations~\cite{cssanimations} and adapting to different device form factors~\cite{css3mediaquery}. \greenweb follows such a spirit of CSS language evolution and expands its scope to allow expression of use QoS experience related information.
+\greenweb extensions follow three design principles. First, adding or removing \greenweb annotations does not change application functionality and correctness. In other words, \greenweb annotations are \textit{modular} components in an application. Modularity allows developers who are unfamiliar with application logic to still be able to express QoS information, and allows removing problematic annotations in a non-interference manner.
 
-\Tbl{tab:api_spec} lists semantics of each \greenweb API. Intuitively, each \greenweb API selects an application element \texttt{E}, and declares CSS properties to express the QoS type and QoS target information when an event \texttt{onevent} is triggered on \texttt{E}. We now describe the details of \greenweb extensions.
+Second, \greenweb is \textit{intuitive} for Web application developers to use in that it does not require developers to specify absolute values of QoS targets (although this option is provided if needed). This is important because developers may not have quantitative knowledge about user perceptibility. Instead, developers provide a qualitative specification. This design makes the APIs more expressive, and provides flexibility for runtime implementation. 
 
-\begin{table}[t]
-\Huge
-\centering
-\captionsetup{width=.7\columnwidth}
-\caption{\small \greenweb API specification. Each API is a CSS rule specifying the QoS information when a particular event is triggered on a Web element.}
-\renewcommand*{\arraystretch}{1.1}
-\renewcommand*{\tabcolsep}{8pt}
-\resizebox{.7\columnwidth}{!}
-{
-    \begin{tabular}{l l}
-    \toprule[0.15em]
-    \bigstrut\textbf{Syntax} & \bigstrut\textbf{Semantics} \\
-    \midrule[0.05em]
-    \specialcell{\texttt{\textcolor{blue}{E:QoS} \{}
-\\~~~~\texttt{\textcolor{Green}{onevent-qos:} continuous;}
-\\\texttt{\}}} & \specialcell{As soon as \texttt{onevent} is triggered on\\DOM element \texttt{E}, the application must\\continuously optimize for frame latency.\\Use the $P_I$ and $P_U$ values in \Tbl{tab:qos_info} as\\the default QoS target for all frames.}\\
-    \midrule[0.05em]
-    \specialcell{\texttt{\textcolor{blue}{E:QoS} \{}
-\\~~~~\texttt{\textcolor{Green}{onevent-qos:} single,}
-\\~~~~\texttt{~~~~~~~~~~~~~~short|}
-\\~~~~\texttt{~~~~~~~~~~~~~~~long}
-\\\texttt{\}}} & \specialcell{Once \texttt{onevent} is triggered on element\\\texttt{E}, the application must optimize for the\\latency of the single frame caused by\\ \texttt{onevent}. Users expext short (longer)\\latency. Use the $P_I$ and $P_U$ values in\\\Tbl{tab:qos_info} as the default QoS target.}\\
-    \midrule[0.05em]
-    \specialcell{\texttt{\textcolor{blue}{E:QoS} \{}
-\\~~~~\texttt{\textcolor{Green}{onevent-qos:} continuous|}
-\\~~~~\texttt{~~~~~~~~~~~~~~~~~single,}
-\\~~~~\texttt{~~~~~~~~~~~~~~~ti-value,}
-\\~~~~\texttt{~~~~~~~~~~~~~~~tu-value,}
+Third, \greenweb syntax is \textit{compatible} with current Web language specifications, which is crucial for lowering the learning curve and ensuring programmer productivity.
 
-\\\texttt{\}}} & \specialcell{Explicitly specify $P_I$ (\texttt{ti-value}) and\\$P_U$ values (\texttt{tu-value}) for QoS targets.\\Note that both values must either appear\\or be ommitted together.}\\
-    \bottomrule[0.15em]
-    \end{tabular}
-}
-\label{tab:api_spec}
-\end{table}
+\subsection{QoS-Aware Web API Design}
+\label{sec:lang:spec:api}
 
-\paragraph{Selector} To decorate a CSS rule as specifying QoS information of an element, we define a new CSS pseudo-class selector~\cite{css_pseudo_class} ``\texttt{:QoS}.'' An element \texttt{E} is selected using existing selectors, such as ID (\texttt{\#id}) and Class (\texttt{.class}) selectors, before applying the \texttt{:QoS} pseudo-class qualifier. For example, \texttt{div\#intro:QoS} selects the \texttt{div} element with the ID \texttt{intro} before declaring QoS information.
+\input{tex/tables/api}
 
-\paragraph{Property} QoS information is expressed as CSS properties in \greenweb. We define a new CSS property called \texttt{onevent-qos}, in which \texttt{onevent} is a DOM event that \greenweb supports. In its simplest form, \texttt{onevent-qos} could be set to \texttt{continuous} (first rule in \Tbl{tab:api_spec}). The semantics of declaring \texttt{onevent-qos: continuous} is that as soon as \texttt{onevent} is triggered on element \texttt{E}, the runtime must continuously optimize for frame latency until the last relevant frame is generated.
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.8\columnwidth]{syntax}
+  \caption{The syntax of \greenweb language extensions.}
+  \label{fig:syntax}
+\end{figure}
+
+The \greenweb APIs extend the current CSS language to specify QoS type and QoS target information. We choose CSS because its syntax and semantics naturally allow us to select DOM elements and specify various characteristics. The core of CSS is a set of \textit{style rules}. Each style rule selects specific Web application elements and sets their style properties. A style rule expresses such semantics through two language constructs: a \textit{selector}, which selects specific Web application elements, and a set of style \textit{declarations}, which are $\langle property, value \rangle$ pairs that assign $value$ to $property$. As an example, the following CSS rule \texttt{h1 \{font-weight: bold\}} selects all the \texttt{h1} elements and sets their \texttt{font-weight} property to \texttt{bold}.
+
+Traditionally, CSS supports purely visual style properties such as fonts and colors. Recent development of CSS (e.g., CSS3) lets developers express richer information such as controlling animations~\cite{cssanimations} and adapting to different device form factors~\cite{css3mediaquery}. \greenweb follows this spirit of CSS language evolution and further expands the CSS semantics scope to allow expressing user QoS related information.
+
+\Fig{fig:syntax} shows the \greenweb syntax, and \Tbl{tab:api_spec} lists the semantics of each API. Intuitively, each \greenweb API selects an application element \texttt{E}, and declares CSS properties to express the QoS type and QoS target information when an event \texttt{onevent} is triggered on \texttt{E}. We now describe the details of the \greenweb extensions.
+
+\paragraph{Selector} To decorate a CSS rule as specifying the QoS information of an element, we define a new CSS pseudo-class selector~\cite{css_pseudo_class} ``\texttt{:QoS}.'' An element \texttt{E} is selected using existing selectors, such as ID (\texttt{\#id}) and Class (\texttt{.class}) selectors, before applying the \texttt{:QoS} pseudo-class qualifier. For example, \texttt{div\#intro:QoS} selects the \texttt{div} element with the ID \texttt{intro} before declaring QoS information.
+
+\paragraph{Property} QoS information is expressed as CSS properties in \greenweb. We define a new CSS property called \texttt{onevent-qos}, in which \texttt{onevent} is a DOM event that \greenweb supports. In its simplest form, \texttt{onevent-qos} could be set to \texttt{continuous} (first rule in \Tbl{tab:api_spec}). The semantics of declaring \texttt{onevent-qos: continuous} is that as soon as \texttt{onevent} is triggered on element \texttt{E}, the Web browser runtime must continuously optimize for frame latency until the last relevant frame is generated.
 
 To express the ``single'' QoS type, the \texttt{onevent-qos} property accepts a list of two values separated by a comma, one to indicate that the QoS type is single, and the other to indicate whether users expect a short or long execution period (second rule in \Tbl{tab:api_spec}). For instance, the declaration \texttt{onevent-qos: single, short} expresses that the runtime must optimize for the latency of the single frame caused by \texttt{onevent}, and users expect short frame latency.
 
-Developers do not have to specify the QoS target values, and the \greenweb runtime will use the $P_I$ and $P_U$ values in \Tbl{tab:qos_info} as the default QoS target. However, we also provide the flexibility for developers to overwrite default QoS targets. This is achieved by specifying absolute values of $P_I$ and $P_U$ (in milliseconds) after \texttt{single} or \texttt{continuous}, as illustrated by the third rule in \Tbl{tab:api_spec}.
+Developers do not have to specify the QoS target values; the \greenweb runtime will use the $P_I$ and $P_U$ values in \Tbl{tab:qos_info} as the default QoS target. However, we also provide the flexibility for developers to overwrite the default QoS targets. This is achieved by specifying absolute values of $P_I$ and $P_U$ (in milliseconds) after \texttt{single} or \texttt{continuous}, as shown in the third rule in \Tbl{tab:api_spec}.
+
+\subsection{Example Usage}
+\label{sec:lang:spec:ex}
+
+The proposed QoS-aware \greenweb APIs support a wide range of Web application interaction patterns. We explore different usages using two examples.
+
+\begin{figure}[t]
+\centering
+\subfloat[Express the QoS type of \texttt{ontouchstart} event as ``continuous,'' and use the default $P_I$ and $P_U$ values.]
+{
+	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{csstransition}
+	\label{fig:csstransition}
+}
+\hspace*{15pt}
+\subfloat[Express the QoS type of \texttt{ontouchmove} event as ``continuous,'' and use 20~ms and 100~ms as the new QoS targets.]
+{
+	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{raf}
+	\label{fig:raf}
+} 
+\caption{Example \greenweb usage.}
+\label{fig:ex}
+\end{figure}
+
+\paragraph{Animations via CSS Transition} The first example involves annotating events that achieve animation using a CSS transition. A CSS transition lets developers specify the initial and end state of an animation and how long the transition takes, while leaving the transition implementation to the Web browser~\cite{csstransitions}. \Fig{fig:csstransition} shows an example in which the transition of the \texttt{width} property of a \texttt{div} element is animated. The initial \texttt{width} property is set to 100px (line 4). The style declaration ``\texttt{transition: width 2s;}'' at line 5 indicates that whenever the \texttt{width} property is reset, the transition will begin and finish in 2 seconds. Later when users click the \texttt{<div>} element, the \texttt{animateExpanding} callback is executed (line 19), which sets the \texttt{width} property to 500px, triggering the 2-second animation.
+
+Application developers realize that user QoS experience of the \texttt{ontouchstart} event is dictated by the animation smoothness. Using \greenweb, developers could express such information by specifying that the QoS type of \texttt{ontouchstart} event is ``continuous'' (lines 7-9). Without further expressing the QoS targets, the default values of $T_I$ and $T_U$ (16.6~ms and 33.3~ms) are used.
+
+\paragraph{Animations via rAF} Another common way of achieving animation is through the \texttt{requestAnimationFrame} (rAF) functions. \Fig{fig:raf} shows the code snippet. In a nutshell, every time a user moves a finger, \texttt{rAF} is executed (if not already) to register an anonymous callback function (line 12), which will get executed when the display refreshes (i.e., when a VSync signal~\cite{vsync} arrives)~\cite{jankbusting} to achieve animation.
+
+Application developers realize that once move events start, they trigger a sequence of continuous frames that determine user QoS experience. In addition, the developers believe that the specific animation in this application does not require a high FPS. Therefore, they specify the QoS type as ``continuous'' and overwrite the default QoS targets with 20~ms and 100~ms, respectively (lines 3-5).
+
+\paragraph{Modular Design Discussion} The \greenweb API design is modular in the sense that \greenweb-annotated program can be integrated with other non-annotated code while ensuring functionality. After all, \greenweb extensions concern with QoS and traditional language constructs concern with functionality. This composability ensures a \textit{separation of concerns} between QoS and functionality (correctness) in Web programming.
+
+The modularity of \greenweb also lets developers add QoS annotations for an event independent of how the event callback is implemented. For example, although animations in the above two examples are implemented through different mechanisms (CSS transition and \texttt{rAF}) and are triggered by different events (\texttt{ontouchstart} and \texttt{ontouchmove}), developers simply express the QoS type as ``continuous'' without having to understand the implementation details. One can imagine that the modularity of the \greenweb APIs would also allow annotating QoS information for functionalities that are implemented by thirty-party libraries whose source code is not available. Modularity is important for extending Web languages because Web application implementations change rapidly. The \greenweb annotations can remain unchanged as the application version evolves and can be removed without interfering the rest of the application logic.
+
+\section{Automatic Annotation}
+\label{sec:lang:auto}
+
+To assist programmers in annotating a Web application with QoS information, we provide a system called \autogreen, which automatically applies \greenweb annotations. The rationale behind designing \autogreen is twofold. First, some Web developers may not want to spend the extra effort of manual annotation, such as for legacy applications. Second, in complex Web applications with many DOM nodes and events, manually going through all events could be cumbersome. In both cases, \autogreen automatically finds all the events and annotates them with the two QoS abstractions, enabling QoS-aware energy efficiency optimizations without programmer intervention.
+
+\Fig{fig:autogreen} gives an overview of \autogreen. It consists of three major phases: an instrumentation phase, a profiling phase, and a generation phase. The instrumentation phase first discovers all DOM nodes and their associated events in an application, and instruments every event callback to inject QoS detection code. With the instrumented application, \autogreen performs a profiling run of each event by explicitly triggering its callback function. During the callback execution, the (injected) detection code checks for certain conditions to determine an event's QoS type and QoS target. After profiling, \autogreen generates QoS annotations and injects them back to the original code.
+
+The detection code determines the QoS type of an event as follows. An event's QoS type is set to ``continuous'' if its callback function triggers a jQuery \texttt{animate()} function, a \texttt{rAF}, or a CSS transition/animation. Otherwise the QoS type is set to ``single.'' To detect \texttt{animate()} and \texttt{rAF}, we overload their original functions and check in the overloaded function. To detect CSS transition/animation, we register a \texttt{transitionend}/\texttt{animationend} event~\cite{csstransitionend,cssanimationend}, which if triggered indicates that a CSS transition/animation exists. As a proof-of-concept prototype, our current implementation does not yet support checking other ways of realizing animations, but could be trivially extended to do so by following a similar detection procedure as described above.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{autogreen}
+  \caption{\autogreen's workflow to automatically annotate mobile Web applications with \greenweb APIs.}
+  \label{fig:autogreen}
+\end{figure}
+
+\autogreen uses the default QoS target values listed in~\Tbl{tab:qos_info} for each detected QoS type. Particularly, for events with a ``single'' QoS type, \autogreen always assumes a short duration. This is because \autogreen does not understand the semantics of an event callback function and has to make conservative decisions about the QoS target information in favor of satisfying QoS over conserving energy.
 
 \section{GreenWeb and WebRT Inteplay}
 \label{sec:lang:inter}
@@ -161,11 +169,45 @@ It is worth noting that although \greenweb and \webrt are compatible and can be 
 
 \webrt is also independent of \greenweb because it by design does not rely on programmer-assisted annotations to perform scheduling. Without QoS ``hints'' from the application, the \webrt schedulers can assume a default QoS target and QoS type for each Loading, Touching, and Moving interaction. The \webrt schedulers can also attempt to infer the QoS type and QoS target by profiling event executions to identify which category in \Tbl{tab:qos_info} that an event falls into. I leave the quantitative comparison between unguided and \greenweb-guided \webrt to future work.
 
+\section{Discussion}
+\label{sec:lang:disc}
+
+\paragraph{Effectiveness in a Multi-application Environment} The ACMP-based \greenweb runtime implementation presented in this paper assumes that all CPU resources in a SoC are available to the foreground Web application during scheduling. We believe that this ACMP-based runtime design is also applicable when multiple mobile applications are concurrently consuming CPU resources. The reason is two-fold.
+
+First, today's ACMP systems have ample CPU resources, e.g., four big and four small cores in the Exynos 5410 SoC with each core cluster having DVFS capability. If there is a background application occupying some CPU resources, the \greenweb runtime system will still have a large trade-off space to schedule, although with fewer resources. Second, today's mobile SoCs are on the verge of supporting fine-grained power management techniques such as per-core DVFS using integrated voltage regulators (IVRs)~\cite{ivr}. Therefore, the scheduling space will become larger to further accommodate concurrent applications in the near future.
+
+\paragraph{Defense Against Mis-annotation} One potential vulnerability of exposing \greenweb hints to developers is that developers might place hints that lead to inefficient system decisions. For example, a developer could set every event's QoS target to an extremely low value, which causes the Web runtime always to operate at the highest performance with maximal energy consumption. Such a mis-annotation could be introduced either inadvertently as a program energy bug or intentionally as an adversarial attack.
+
+The notion of user-agent intervention (UAI)~\cite{useragentintervention} in the Web community can be used to defend against such an issue. In short, UAI contends that a Web platform should correct application behaviors that are deemed harmful or undesired. Most of today's Web runtime systems have already implemented plenty of UAI policies such as blocking malicious third-party scripts or re-prioritizing resource loading order under latency/bandwidth constraints. Similarly, a Web runtime could adopt a \greenweb-specific UAI policy. One candidate is to specify an energy budget of any Web application and ignores overly aggressive \greenweb annotations once the energy budget is consumed. We leave it as future work to define, express, and implement such a UAI policy.
+
+\paragraph{Composability of QoS Abstractions} Although the QoS type and QoS target abstractions are sufficient for expressing predominant QoS specifications on \textit{today}'s mobile devices, in the long term we will see new user interaction forms (e.g., using visible light~\cite{license}) and new ways that users assess QoS experience. Therefore, it is important to design ``primitive'' QoS abstractions, based on which complex, higher-level QoS abstractions can be easily composed.
+
+The composability of QoS abstractions is critical because enumerating every single possible kind of QoS experience in a Web programming model is not scalable. Instead, the Web programming model should ideally provide a QoS primitive library that lets developers construct different QoS specifications in a completely customized way. To achieve this goal will likely involve extensively surveying future human-computer interaction forms and new QoS specifications. We leave it for the next phase of research.
+
 \section{Related Work}
 \label{sec:lang:related}
 
-\paragraph{Language Support for Web Performance} The Web community has a long tradition of providing language extensions that allow developers to specify ``hints'' for browsers. The focus, however, has been primarily on \textit{performance} optimizations. \greenweb, to the best of our knowledge, is the first Web language extension that specifically targets \textit{energy}.
+We first discuss \greenweb in the context of prior work on language support for Web performance (\Sect{sec:lang:related:perf}). Although there exists little prior work on language support for Web energy-efficiency, language extensions for general energy optimizations do exist, which we compare and contrast \greenweb against in (\Sect{sec:lang:related:energy}). Finally, we discuss why the two QoS abstractions we propose are more comprehensive than prior work on mobile QoS characterizations (\Sect{sec:lang:related:qos}).
+
+\subsection{Language Support for Web Performance}
+\label{sec:lang:related:perf}
+
+The Web community has a long tradition of providing language extensions that allow developers to specify ``hints'' for browsers. The focus, however, has been primarily on \textit{performance} optimizations. \greenweb, to the best of our knowledge, is the first Web language extension that specifically targets \textit{energy}.
 
 The most classical example of performance hint is link prefetch~\cite{linkprefetch}, which lets Web developers use an HTML tag to specify that a particular link will likely be fetched in the near future. With such information, a Web browser could prefetch the link when there are no on-demand network requests. Another example is the CSS \texttt{willChange} property~\cite{csswillchange}, which hints browsers about what visual changes to expect from an element so that the browser could perform a computationally intensive task ahead of time. Similar to \texttt{willChange}, \greenweb introduces a new CSS property \texttt{onevent-qos}, which allows providing QoS-related hints.
 
-\paragraph{Language Support for Energy Efficiency} Language support for energy-efficiency has recently become an important research thrust. Most work targets approximate computing and sensor-based applications. To the best of our knowledge, this is the first work that focuses on Web applications. Green~\cite{green} provides APIs that let developers specify approximate versions of a function and QoS loss constraints. EnerJ~\cite{enerJ} takes the language support for approximate computing a step further by designing a general type system. These language frameworks could be applicable if sources of approximation in Web applications are identified, which however is beyond our scope. LAB~\cite{lab} identifies latency, accuracy, and battery as fundamental abstractions for improving energy-efficiency in sensor-based applications. Similarly, \greenweb identifies the QoS type and QoS target abstractions for enabling energy-efficient Web applications.
+\subsection{Language Support for Energy Efficiency}
+\label{sec:lang:related:energy}
+
+Language support for energy efficiency has recently become a major research thrust. Most work targets sensor-based applications and approximate computing whereas \greenweb, to the best of our knowledge, is the first to focus on Web applications. In addition, most previously proposed language systems require developers to annotate applications manually. We show that \greenweb annotations can be automatically applied without programmer intervention. We now compare \greenweb with prior language proposals in greater detail.
+
+Eon~\cite{eon} provides language constructs that let developers express alternative program control flow paths and associate energy states with control flows, based on which the runtime selects control flow paths that are suitable given the device energy level. Green~\cite{green} provides APIs that let developers specify multiple approximate versions of a function and QoS loss constraints, which guide the runtime to save energy without violating QoS. Both proposals rely on developers supplying alternative implementations, which is an optimization not immediately applicable to Web applications. In the future, however, it would be interesting to evaluate such an optimization strategy in the Web domain.
+
+Energy Types~\cite{energytypes} and EnerJ~\cite{enerJ} take the language support for energy-efficiency a step further by designing general type systems. Both work ensures sound and safe energy optimizations by enforcing static type checking. Both type systems target imperative programming, and therefore are not immediately applicable to Web programming which is inherently declarative. In the future, however, it would be interesting to study how to decorate DOM elements with different type qualifiers to guide the energy optimizations.
+
+LAB~\cite{lab} identifies latency, accuracy, and battery as fundamental abstractions for improving energy efficiency in sensor-based applications. Similarly, \greenweb identifies the QoS type and QoS target abstractions for enabling energy-efficient Web applications.
+
+\subsection{Mobile QoS Characterization}
+\label{sec:lang:related:qos}
+
+The two QoS abstractions and the design of \greenweb APIs is driven by understanding application QoS requirements from an application events perspective, which is not the focus in the majority of existing mobile workload suite and benchmark~\cite{jsbench,BrowsingBench,BrowserMark,MobileBench,Moby,Vellamo,AnTuTu,sunspider,Octane,Kraken,GeekBench}. Other benchmarks consider only a particular form of QoS. For example, BBench~\cite{BBench} considers the webpage load time as the QoS constraint for Web browsing; the Web latency benchmark~\cite{WebLatencyBenchmark} considers the event latency of user actions to webpage elements; the GFXBench~\cite{GFXBench} and BaseMark~\cite{BaseMark} benchmarks consider FPS. However, our QoS abstractions lead to a general methodology to identify QoS requirements of a wide range of applications.

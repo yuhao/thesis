@@ -9,12 +9,12 @@ While there is a significant opportunity for growth, technology challenges in cu
 
 My Ph.D. research objective is to design a next-generation mobile computing substrate---a hardware/software collaborative system that is energy-efficient and delivers satisfactory user QoS experience. Given the board scope of mobile Web that involves both computation and network, I first quantify the impact of computation and network on mobile Web~\cite{zhu2015role}. I find that generational advancements in cellular network technology have reached a point where further improving the network latency only leads to marginal performance improvement with prohibitively high energy consumption. In contrast, the compute starts having a significant impact on mobile Web performance and energy consumption. Therefore, I focus my research on the~\textit{computation} side.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{framework}
-  \caption{\small{Overview of the cross-layer research contributions.}}
-  \label{fig:framework}
-\end{figure}
+\begin{sidewaysfigure}
+    \centering
+    \includegraphics[trim=0 0 0 0, clip, width=1\columnwidth]{framework}
+    \caption{Overview of my cross-layer research contributions.}
+    \label{fig:framework}
+\end{sidewaysfigure}
 
 I take a holistic view of the mobile Web computation stack, spanning applications, Web browser runtime, and processor architecture. Prior art has been mostly focused on optimizations within individual layers while maintaining traditional interfaces to other layers. My preliminary work~\cite{big-little,zhu2014exploiting,zhu2015role,webcore,ebs,greenweb,mobilecpu,eve-char} has demonstrated that improving energy efficiency while continuing to scale performance of the mobile Web requires us \textit{to enhance the traditional interfaces with new abstractions and to leverage the new interfaces for cross-layer optimizations}.
 
