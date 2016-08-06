@@ -393,12 +393,6 @@ We make two notable observations from the distribution results. First, \ebs tend
 
 \paragraph{Configuration Switching Frequency} Complementary to the distribution of architecture configuration, \Fig{fig:freq_switch} shows the switching frequency of architecture configuration in \textit{\ebs-I} and \textit{\ebs-U}. We decompose the configuration switching into two categories: CPU frequency change and core migration (between big and little clusters). Thus, \Fig{fig:freq_switch} is shown as a stacked bar plot where the frequencies of both categories are stacked for each application.
 
-We draw three conclusions from the switching frequency statistics. First, \ebs introduces only modest configuration switching (20\% on average). Recall from \Sect{sec:runtime:exp} that the CPU frequency switching and core migration incur overhead only to the order of $\mu$s, much smaller than the QoS target which is typically to the order of millisecond. Therefore, the execution configuration has minimal performance impact.
-
-Second, for most of applications \textit{\ebs-I} incurs more switchings than \textit{\ebs-U}. This is unsurprising because as compared to \textit{\ebs-U}, \textit{\ebs-I} optimizes for a tighter QoS target, which is more sensitive to frame (phase) variance and more vulnerable to frame performance mis-prediction. In contrast, a more relaxed QoS target is more robust against frame variance. Our results suggest that a better frame performance predictor such as the profiling-guided prediction~\cite{pgdvfs} would be helpful in reducing the execution configuration switching in the imperceptible mode.
-
-Third, the CPU frequency change dwarfs core migrations and dominates the configuration switching. Thus, fast DVFS is desired. Our results suggest that a fast on-chip voltage regulator that is increasingly prevalent in server processors~\cite{fivr,ivr} is also beneficial in mobile CPUs.
-
 \begin{figure}[p]
 \centering
 \subfloat[QoS violation comparison under the imperceptible usage scenario.]
@@ -415,6 +409,12 @@ Third, the CPU frequency change dwarfs core migrations and dominates the configu
 \caption{QoS violations are presented as additional violations on top of \textit{Perf}. The $y$-axis of the two figures are kept the same for comparion purposes.}
 \label{fig:full_results}
 \end{figure}
+
+We draw three conclusions from the switching frequency statistics. First, \ebs introduces only modest configuration switching (20\% on average). Recall from \Sect{sec:runtime:exp} that the CPU frequency switching and core migration incur overhead only to the order of $\mu$s, much smaller than the QoS target which is typically to the order of millisecond. Therefore, the execution configuration has minimal performance impact.
+
+Second, for most of applications \textit{\ebs-I} incurs more switchings than \textit{\ebs-U}. This is unsurprising because as compared to \textit{\ebs-U}, \textit{\ebs-I} optimizes for a tighter QoS target, which is more sensitive to frame (phase) variance and more vulnerable to frame performance mis-prediction. In contrast, a more relaxed QoS target is more robust against frame variance. Our results suggest that a better frame performance predictor such as the profiling-guided prediction~\cite{pgdvfs} would be helpful in reducing the execution configuration switching in the imperceptible mode.
+
+Third, the CPU frequency change dwarfs core migrations and dominates the configuration switching. Thus, fast DVFS is desired. Our results suggest that a fast on-chip voltage regulator that is increasingly prevalent in server processors~\cite{fivr,ivr} is also beneficial in mobile CPUs.
 
 \paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and \ebs under the imperceptible and usable scenarios, respectively. On average, \ebs introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in the microbenchmarks because the interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
 
