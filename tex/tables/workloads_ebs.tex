@@ -1,0 +1,33 @@
+% !TEX root = ../../paper.tex
+
+\begin{table}[p]
+\large
+\centering
+\captionsetup{width=\columnwidth}
+\caption{List of evaluated applications. ``Domain'' indicates the application domain. ``Interaction Description'' provides an overview of the kind of interactions that are performed on each application. ``Time'' indicates the total interaction duration. ``Events'' indicates the amount of events triggered during an interaction.}
+\renewcommand*{\arraystretch}{1.5}
+\renewcommand*{\tabcolsep}{5pt}
+\resizebox{\columnwidth}{!}
+{  
+\begin{tabular}{l l l r r}
+\toprule[0.15em]
+\bigstrut\textbf{Application}  &  \bigstrut\textbf{Domain} &  \bigstrut\textbf{Interaction Description} & \bigstrut\textbf{Time}  & \bigstrut\textbf{Events} \\
+\midrule[0.05em]
+BBC          & News   & Load the main webpage. & 0:86    & 60 \\ \cline{3-3}
+Google       & Search    & Load the main webpage. & 0:31    & 26\\\cline{3-3}
+CamanJS      & Utility   & \specialcell{Tap a button to apply an\\ image filter to a photo.} & 0:49    & 24\\\cline{3-3}
+LZMA-JS      & Utility & \specialcell{Tap the button to compress\\ the jQuery library file.}    & 0:53    & 39 \\\cline{3-3}
+MSN          & News   & Tap to display the menu bar. & 0:59    & 126 \\\cline{3-3}
+Todo         & Utility   & Tap to delete all List items. & 0:26    & 26\\\cline{3-3}
+Amazon       & Shopping & \specialcell{Horizontally swipe the Ads\\ bar to see different Ads.}     & 0:36    & 101\\\cline{3-3}
+Craigslist   & Search     & \specialcell{Scroll the page to find\\the ``outdoor'' category.} & 0:25    & 22\\\cline{3-3}
+Paper.js     & Utility    & \specialcell{Move finger to draw a \\series of curves.} &  0:16    & 560 \\\cline{3-3}
+Cnet         & News   & \specialcell{Tap a button to expand the \\main menu in animation.} & 0:46    & 60 \\\cline{3-3}
+Goo.ne.jp          & News   & \specialcell{Tap news group title to\\ switch to another group.} & 0:16    & 23 \\\cline{3-3}
+W3Schools    & Education   & Tap to show the sitemap. &  0:64    & 59 \\
+\bottomrule[0.15em]
+\end{tabular}
+}
+\label{tab:app_ebs}
+\end{table}
+

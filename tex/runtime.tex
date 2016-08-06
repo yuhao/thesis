@@ -5,11 +5,44 @@
 
 Today's mobile processors are becoming extremely heterogeneous. They often combine general-purpose cores that have different performance and energy characteristics~\cite{single-ISA} (e.g., asymmetric chip-multiprocessor architecture) with special-purpose domain-specific cores (e.g., \webcore). While the hardware upheaval promises performance and energy improvements for the mobile Web, current Web runtime systems are not designed to fully exploit the capability of the underlying hardware. The main bottleneck is that current runtime-architecture interface merely exposes the hardware as a monolithic sequential execution model to the runtime system while hiding many architecture-level details. Without having a full visibility of the hardware details, current Web runtimes often lead to energy-inefficient decisions or violate user QoS requirement.
 
-To bridge the widening gap between the architecture complexity and the architecture-agnostic runtime system, I propose to enhance the existing runtime-architecture interface by exposing architecture details to the Web runtime. I specifically focus on the ACMP architecture~\cite{acmp,single-ISA} as the hardware substrate. ACMP is long known to provide a large performance-energy trade-off space, and is already widely used in today's mobile systems~\cite{big-little-future,exynos5biglittle}. I  quantitatively show that Web applications particularly benefit from the heterogeneity offered by the ACMP architecture to achieve an ideal balance between QoS experience and energy consumption (\Sect{sec:runtime:char}).
+To bridge the widening gap between the architecture complexity and the architecture-agnostic runtime system, I propose to enhance the existing runtime-architecture interface by exposing architecture details to the Web runtime. I specifically focus on the ACMP architecture~\cite{acmp,single-ISA} as the hardware substrate. ACMP is long known to provide a large performance-energy trade-off space, and is already widely used in today's mobile systems~\cite{big-little-future,exynos5biglittle}. I  quantitatively show that Web applications particularly benefit from the heterogeneity offered by the ACMP architecture to achieve an ideal balance between QoS experience and energy consumption.
 
-Leveraging the ACMP architecture, I propose \webrt, a Web runtime that minimizes energy while guaranteeing satisfactory user QoS experience by scheduling Web application executions using proper ACMP configurations. Particularly, I show that we must devise different optimization schemes according to the nature of different user interaction forms. To that end, I introduce a user-application interaction model called LTM. LTM captures three fundamental user interaction forms in mobile Web applications--Loading, Tapping, and Moving--and provides a framework for reasoning about different energy optimization strategies (\Sect{sec:runtime:overview}).
+Leveraging the ACMP architecture, I propose \webrt, a Web runtime that minimizes energy while guaranteeing satisfactory user QoS experience by scheduling Web application executions using proper ACMP configurations. The key insight is that we must devise different optimization schemes according to the nature of different user interaction forms. To that end, I introduce a user-application interaction model called LTM. LTM captures three fundamental user interaction forms in mobile Web applications--Loading, Tapping, and Moving--and provides a framework for reasoning about different energy optimization strategies.
 
-I then describe \webrt's two critical components. The first component is the webpage-aware scheduler that targets the loading (L) process of a Web application (\Sect{sec:runtime:load}), and the second component is the event-based scheduler that targets the touching (T) and moving (M) interactions (\Sect{sec:runtime:ebs}). Finally, I compare the contrast \webrt with prior work on software support for mobile Web (\Sect{sec:runtime:related}).
+The rest of this chapter is organized as follows. \Sect{sec:runtime:exp} presents the hardware and software experimental methodology. \Sect{sec:runtime:ltm} introduces the LTM interaction model and points out that the runtime mechanisms need to be different for different interaction forms. Using loading (L) as a case study, \Sect{sec:runtime:char} quantitatively shows that an ACMP is beneficial for mobile Web and therefore is a natural candidate for \webrt. \Sect{sec:runtime:load} describes the \webrt components for L, and \Sect{sec:runtime:ebs} describes the \webrt component for T and M. Finally, \Sect{sec:runtime:related} compares the contrasts \webrt with prior work on software support for mobile Web.
+
+\section{Experimental Setup}
+\label{sec:runtime:exp}
+
+\paragraph{Software Infrastructure} \webrt-related experiments and implementations are performed on Google's open-source Chromium browser engine, which is used directly in the Chrome browser and is the core of many other popular browsers, such as Opera and Android's default browser. We use Chromium version 48.0.2549.0, which is the most recent version at the time of my work. The modified Chromium runs on unmodified Android version 4.2.2.
+
+\paragraph{Hardware Platform} We use the ODroid XU+E development board~\cite{odroidxue}, which contains an Exynos 5410 SoC that is known for powering the Samsung Galaxy S4. The Exynos 5410 SoC contains a representative ACMP architecture comprising an energy-hungry high-performance (big) core cluster and an energy-conserving low-performance (little) core cluster. The big and little clusters can be individually disabled and enabled. The big cores are ARM Cortex-A15 processors that operate between 800~MHz and 1.8~GHz at a 100~MHz granularity. The little cores are ARM Cortex-A7 processors that operate between 350~MHz and 600~MHz at a 50~MHz granularity. The frequency switching and core migration overhead is \SI{100}{\mu\second} and 20~$\mu$s, respectively~\cite{big-little,ebs}.
+
+\paragraph{Energy Measurement}  \webrt focuses on the processor power consumption because the processor power has been steadily increasing and has gradually become the most significant power consumer in a mobile device compared to other components such as the screen and radio (\Sect{sec:motivation:energy}).
+
+We measure the processor power and energy consumption on real hardware as follows. The ODroid XU+E development board has built-in current sense resistors (\SI{10}{\milli\ohm}) for both the big and little cores. We use a National Instrument DAQ Unit X-series 6366 to collect voltage measurements at these sense resistors for the big and small CPU clusters at a rate of 1,000 samples per second, and thereby derive the power consumption. Energy consumption is computed by multiplying power with real execution time.
+
+\paragraph{Reproducibility} We repeat every experiment that we study 3 times. Unless otherwise mentioned, the results we report are the median of all runs. We find the run-to-run variations are usually about 5\%, and do not affect our conclusions. We use Mosaic~\cite{mosaic}, a UI-level record and replay tool, to ensure consistent user interaction and to reduce human-induced noise across different runs on the same application.
+
+\section{LTM Model of Mobile User Interaction}
+\label{sec:runtime:ltm}
+
+%An ACMP consists of cores with different microarchitectures, such as out-of-order and in-order. Each core has a variety of frequency settings. Different core and frequency combinations provide a large trade-off space between performance and energy. The objective of our ACMP-based \webrt is to find an ideal ACMP configuration (i.e., a $\langle core, frequency \rangle$ tuple) that minimizes the energy consumption while guaranteeing an acceptable responsive time when a user interaction happens.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{interaction_model}
+  \caption{The LTM (Loading-Tapping-Moving) user-application interaction model of mobile Web. LTM captures three primitive types of interaction: page loading, finger tapping, and finger moving. We use LTM as a framework to reason about user QoS experience.}
+  \label{fig:interaction}
+\end{figure}
+
+To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms in mobile Web applications: loading application page (L), tapping the display (T), and moving finger on the display (M). \Fig{fig:interaction} illustrates the LTM model.
+
+The three interactions cover a majority of human-computer interactions on mobile devices. This is because every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M). The moving interaction in particular could be manifested in various ways, such as scrolling, swiping, or even drawing a picture. Internally, each user interaction is translated to one or more application event. For example, a tapping interaction is often translated to a \texttt{touchstart} and a \texttt{touchend} event, and a moving interaction can be translated to a \texttt{scroll} event or a \texttt{touchmove} event depending on context. In this paper, we focus on the following events that could be triggered by LTM interactions on a mobile device: \texttt{click}, \texttt{scroll}, \texttt{touchstart}, \texttt{touchend}, and \texttt{touchmove}. We do not consider events specific to desktops (e.g., \texttt{drag}, \texttt{mouseover}) that are generally not fired on mobile devices.
+
+%Each event is bound to a DOM node with a callback function, which is executed when the event is triggered on the associated DOM node. The result of callback execution is fed into the Web browser rendering engine, which eventually paints the resulting frame(s) and updates the display. Frames are what users perceive as application's responses to their interactions, and thus determine the QoS experience.
+
+The runtime optimization strategy for Loading is different from that for Touching and Moving. The fundamental difference is that Loading occurs only once per usage session while Touching and Moving interactions occur repetitively throughout the entire Web application usage session. As a result, it is possible to make the prediction for the Touching and Moving interactions based on the history information within the same usage session. For Loading, however, every application loading is likely different from the previous one, and as such we can not make predictions based on previous loadings of (potentially different) applications. Instead, we have to make prediction based on the particular content of a given Web application. I will discuss the \webrt component that targets the Loading in \Sect{sec:runtime:load} and the component that targets Touching and Moving interactions in \Sect{sec:runtime:ebs} separately.
 
 \section{Motivation: Energy-Delay Trade-off}
 \label{sec:runtime:char}
@@ -20,10 +53,9 @@ I then describe \webrt's two critical components. The first component is the web
 
 An ACMP consists of cores with different computation capabilities--often with different microarchitectures, such as big out-of-order cores and small in-order cores. Each core has a variety of frequency settings. Different core and frequency combinations provide a wide range performance and energy characteristics. The flexibility of an ACMP architecture to make trade-offs between performance and energy consumption leads us to answer a fundamental question: do Web applications benefit from an ACMP heterogeneous systems?  For example, can a processor lower the frequency for a simple webpage to consume less energy but still respect the QoS deadline? Can a webpage originally scheduled on an energy-consuming core be migrated to an energy-saving core without violating the QoS constraint?
 
-We quantitatively answer this question using webpage loading as a case study. The same experimental methodology and conclusion also hold true for other types of interactions in mobile Web applications. We base our measurements and analysis on the 5,000 hottest webpages on the Internet ranked by \website{http://www.alexa.com/}. We show that different webpages require different core and frequency configurations to meet a given deadline of webpage loading while minimizing the energy. This suggests that ACMPs with both big and smalls core, each capable of performing DVFS, are strongly beneficial.
+We quantitatively answer this question using webpage loading as a case study. The same experimental methodology and conclusion also hold true for the other two types of interactions in mobile Web applications. We base our measurements and analysis on the 5,000 hottest webpages on the Internet ranked by \website{http://www.alexa.com/}. We show that different webpages require different core and frequency configurations to meet a given deadline of webpage loading while minimizing the energy. This suggests that ACMPs with both big and smalls core, each capable of performing DVFS, are strongly beneficial.
 
-To demonstrate the benefits of such heterogeneous systems, we measure the webpage load time and energy consumption of the 5,000 webpages on the Cortex-A9 and A8 processors (See \Sect{sec:runtime:load:eval} for a detailed experimental setup). We sweep a total of seven configurations available on the big and little cores, i.e., Cortex-A9 with four DVFS settings and A8 with three DVFS settings, respectively. We begin our analysis with four webpages that represent the general trends that we observe (\Sect{sec:runtime:char:representative}), and we subsequently expand our analysis to include the comprehensive set of all webpages (\Sect{sec:runtime:char:comprehensive}).
-% (\website{www.autoblog.com}, \website{www.newegg.com}, \website{www.adobe.com} and \website{www.baidu.com})
+To demonstrate the benefits of such heterogeneous systems, we measure the webpage load time and energy consumption of the 5,000 webpages on the Cortex-A9 and A8 processors. We sweep a total of seven configurations available on the big and little cores, i.e., Cortex-A9 with four DVFS settings and A8 with three DVFS settings, respectively. We begin our analysis with four webpages that represent the general trends that we observe (\Sect{sec:runtime:char:representative}), and we subsequently expand our analysis to include the comprehensive set of all webpages (\Sect{sec:runtime:char:comprehensive}).
 
 \subsection{Representative Analysis}
 \label{sec:runtime:char:representative}
@@ -59,32 +91,10 @@ Although 3~seconds is the typical cut-off latency on mobile systems, we also stu
 %In conclusion, different webpages have different ideal core and frequency configurations, and can strongly benefit from a versatile heterogeneous system consisting of both big and little cores each capable of performing DVFS.
 In summary, we find that different webpages require different ideal core and frequency settings to achieve the ideal balance between performance and energy-efficiency. Varying cut-off latencies also demand different ideal configurations. Therefore, we conclude that different webpages can strongly benefit from a versatile heterogeneous system consisting of both big and little cores each capable of performing DVFS.
 
-\section{WebRT Overview}
-\label{sec:runtime:overview}
-
-An ACMP consists of cores with different microarchitectures, such as out-of-order and in-order. Each core has a variety of frequency settings. Different core and frequency combinations provide a large trade-off space between performance and energy. The objective of our ACMP-based \webrt is to find an ideal ACMP configuration (i.e., a $\langle core, frequency \rangle$ tuple) that minimizes the energy consumption while guaranteeing an acceptable responsive time when a user interaction happens.
-
-%To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms: loading application page (L), tapping the display (T), and moving a finger on the display (M). The three interactions cover a majority of human-computer interactions on mobile devices: every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{interaction_model}
-  \caption{The LTM (Loading-Tapping-Moving) user-application interaction model of mobile Web. LTM captures three primitive types of interaction: page loading, finger tapping, and finger moving. We use LTM as a framework to reason about user QoS experience.}
-  \label{fig:interaction}
-\end{figure}
-
-To systematically analyze user interactions in mobile Web applications, we introduce a simple conceptual model called LTM, which captures three primitive user interaction forms in mobile Web applications: loading application page (L), tapping the display (T), and moving finger on the display (M). \Fig{fig:interaction} illustrates the LTM model.
-
-The three interactions cover a majority of human-computer interactions on mobile devices. This is because every application requires a loading phase (L), and post-loading interactions on mobile devices are mostly performed in the form of finger tapping (T) or finger moving (M). The moving interaction in particular could be manifested in various ways, such as scrolling, swiping, or even drawing a picture. Internally, each user interaction is translated to one or more application event. For example, a tapping interaction is often translated to a \texttt{touchstart} and a \texttt{touchend} event, and a moving interaction can be translated to a \texttt{scroll} event or a \texttt{touchmove} event depending on context. In this paper, we focus on the following events that could be triggered by LTM interactions on a mobile device: \texttt{click}, \texttt{scroll}, \texttt{touchstart}, \texttt{touchend}, and \texttt{touchmove}. We do not consider events specific to desktops (e.g., \texttt{drag}, \texttt{mouseover}) that are generally not fired on mobile devices.
-
-%Each event is bound to a DOM node with a callback function, which is executed when the event is triggered on the associated DOM node. The result of callback execution is fed into the Web browser rendering engine, which eventually paints the resulting frame(s) and updates the display. Frames are what users perceive as application's responses to their interactions, and thus determine the QoS experience.
-
-The runtime optimization strategy for Loading is different from that for Touching and Moving. The fundamental difference is that Loading occurs only once per usage session while Touching and Moving interactions occur repetitively throughout the entire Web application usage session. As a result, it is possible to make the prediction for the Touching and Moving interactions based on the history information within the same usage session. For Loading, however, every application loading is likely different from the previous one, and as such we can not make predictions based on previous loadings of (potentially different) applications. Instead, we have to make prediction based on the particular content of a given Web application. I will discuss the \webrt component that targets the Loading in \Sect{sec:runtime:load} and the component that targets Touching and Moving interactions in \Sect{sec:runtime:ebs} separately.
-
 \section{Webpage-aware Scheduling}
 \label{sec:runtime:load}
 
-In this section, I first show that it is possible to predict the webpage load time and energy consumption using merely webpage-inherent characteristics (\Sect{sec:runtime:load:model}). This prediction scheme had two advantages. First, it does not rely on any previous webpage loading history information and is based completely on each webpage's inherent characteristics. Second, the prediction is performed at the webpage parsing time which happens at the very beginning of the loading process, and as such allows enough time for energy optimizations.
+In this section, I first show that it is possible to predict the webpage load time and energy consumption using merely webpage-inherent characteristics (\Sect{sec:runtime:load:model}). This prediction scheme had two advantages. First, it does not rely on any previous webpage loading history information and is based completely on each webpage's inherent characteristics. Second, the prediction is performed at the webpage parsing time which happens at the very beginning of the loading process, and as such allows enough time for energy optimizations. We quantitatively show that our predictive models achieve a desirable accuracy (\Sect{sec:runtime:load:model_eval}).
 
 Based on such predictions, we propose a webpage-aware scheduler as a \webrt component that predicts the ACMP configuration for webpage loading in order to minimize energy consumption while meeting a specified cut-off latency (\Sect{sec:runtime:load:sched}). Real hardware and software measurements show that against a performance-oriented hardware strategy, the webpage-aware scheduler achieves 83.0\% energy savings while violating the cut-off latency for only 4.1\% more webpages. Compared with a more intelligent, on-demand OS DVFS scheduler, the mechanism achieves an additional 8.6\% energy savings along with a 4.0\% performance improvement~(\Sect{sec:runtime:load:eval}).
 
@@ -124,7 +134,7 @@ In general, we find two types of correlation: inherent correlation and imposed c
 Furthermore, it is unlikely that the true relationship between the response and all predictors is strictly linear as assumed by simple linear models.  One effective method to model nonlinearity is to fit data with \textit{restricted spline} functions that are piecewise polynomial functions but which force linear fitting beyond the first and last knots~\cite{ESL}.
 
 \subsection{Model Evaluation}
-\label{sec:model-eval}
+\label{sec:runtime:load:model_eval}
 
 To validate the model, we obtain 2,500 observations in addition to the 2,500 observations used for deriving the model. We incrementally evaluate the effect of various refinement techniques described previously by comparing the accuracy of three regression models. First, we evaluate a basic linear regression (L) model that prunes less-significant predictors. Second, we evaluate linear regression with regularization (R) that further prunes predictors correlated with each other. Third, we evaluate a restricted cubic spline-based (RCS) model using pruned features, which captures the nonlinear relationship between predictors and responses. Of all three models, RCS performs best at predicting both load time and energy. We show all three models for completeness of evaluation.
 
@@ -155,16 +165,12 @@ We also assess the distribution or prediction errors. \Fig{fig:perf_cdf} shows t
 
 \paragraph{Scheduling Overhead} We consider two major scheduling overheads: prediction and configuration transitioning. Prediction occurs very rapidly (\textless 3~milliseconds on the Cortex-A9 under 1.2~GHz). Moreover, prediction is interleaved with the parsing stage of the rendering engine. As parsing in modern browsers is highly optimized (e.g., asynchronous with the other processing), the prediction overhead is insignificant. On the basis of our measurements, we assume a constant overhead of 5~milliseconds.
 
-Transitioning between hardware configurations involves the penalty of migrating tasks between big/little cores and/or frequency scaling overhead. The major overhead source of task migration is context switch, i.e. (re)storing architecture state such as register files and configuration registers, as well as warming up the private L1/L2 caches (assuming cache coherency between the last-level cache (LLC) of big and little cores). We assume a constant overhead of 20~milliseconds for state (re)storing per context switch, as indicated for the ARM big.LITTLE system~\cite{big.little}. For private cache warmup penalty, prior work shows that performance often improves when private LLCs of big and little cores are powered on together~\cite{PIE}. Thus, we ignore the warmup penalty. Also, prior work suggested that the power overhead of task migration is <~0.75\%~\cite{tm}. Thus, we do not consider the additional energy consumption of our scheduling mechanism.
+Transitioning between hardware configurations involves the penalty of migrating tasks between big/little cores and/or frequency scaling overhead. The major overhead source of task migration is context switch, i.e. (re)storing architecture state such as register files and configuration registers, as well as warming up the private L1/L2 caches (assuming cache coherency between the last-level cache (LLC) of big and little cores). We assume a constant overhead of 20~milliseconds for state (re)storing per context switch, as indicated for the ARM big.LITTLE system~\cite{big.little}. For private cache warmup penalty, prior work shows that performance often improves when private LLCs of big and little cores are powered on together~\cite{PIE}. Thus, we ignore the warmup penalty. Also, prior work suggested that the power overhead of task migration is \textless 0.75\%~\cite{tm}. Thus, we do not consider the additional energy consumption of our scheduling mechanism.
 
 For frequency scaling, we assume 0.3~milliseconds as the overhead. The Linux kernel uses this value on both the Cortex-A9 and A8 systems. This value takes into account both hardware (i.e., voltage regulator module switching frequency) and software overhead (i.e., privilege-level switching overhead for the frequency change request). In our evaluation, since we do not know which configuration the web browser is currently running in, we conservatively consider both the configuration transitioning overhead and the frequency scaling overhead at every scheduling point.
 
 \subsection{Evaluation}
 \label{sec:runtime:load:eval}
-
-\paragraph{Energy savings} We compare the webpage-aware scheduling mechanism against an intelligent synthesized OS scheduler that performs on-demand DVFS on a heterogeneous system. The OS scheduler scales the frequency during a webpage load based on simple heuristics of system utilization~\cite{OS_DVFS1,OS_DVFS2}. It samples the CPU usage at a certain period and scales up the frequency if the average CPU usage in the previous sampling period is above a preset threshold, and vice versa. Because no Linux scheduler can yet perform heterogeneous scheduling across big/little cores, we synthesize such a scheduler by running the webpages under the ``on-demand'' cpufreq-governor~\cite{ondemand} on the big core and the little core, individually, and then choose the better result.
-
-We compare the two scheduling techniques with a baseline strategy that consistently yields the best performance. We determine such a baseline by assessing the performance of all the different core and frequency configurations. \Fig{fig:cutoff_cdf} shows the cumulative distribution of webpage load time under each configuration. Each ($x$, $y$) point in the figure represents the portion of webpages ($y$) loaded within a certain delay ($x$). The big core with the peak frequency (1.2~GHz) achieves the best overall performance. It can load 96.5\% of the webpages within 3~seconds. As the frequency and core capability degrade, fewer webpages can be loaded within the same cut-off latency. Therefore, we choose the big core~(A9) with its peak frequency~(1.2~GHz) as the high-performance baseline.
 
 \begin{figure}[t]
 \centering
@@ -173,7 +179,11 @@ We compare the two scheduling techniques with a baseline strategy that consisten
 \label{fig:cutoff_cdf}
 \end{figure}
 
-We evaluate the same 2,500 webpages that we used to assess the accuracy of the regression models. Assuming a 3~second cut-off latency, \Fig{fig:results_energy} shows the boxplot of per-webpage energy savings under the webpage-aware and OS schedulers against the high-performance mode. Both schedulers achieve significant energy savings over the high-performance baseline, with a (geometric) average of 83.6\% and 83.0\%, respectively. This is because both schedulers can schedule webpages to the lower power core or lower frequency.
+\paragraph{Baseline Mechanism} We compare the webpage-aware scheduling mechanism against an intelligent synthesized OS scheduler that performs on-demand DVFS on a heterogeneous system. The OS scheduler scales the frequency during a webpage load based on simple heuristics of system utilization~\cite{OS_DVFS1,OS_DVFS2}. It samples the CPU usage at a certain period and scales up the frequency if the average CPU usage in the previous sampling period is above a preset threshold, and vice versa. Because no Linux scheduler can yet perform heterogeneous scheduling across big/little cores, we synthesize such a scheduler by running the webpages under the ``on-demand'' cpufreq-governor~\cite{ondemand} on the big core and the little core, individually, and then choose the better result.
+
+We compare the two scheduling techniques with a baseline strategy that consistently yields the best performance. We determine such a baseline by assessing the performance of all the different core and frequency configurations. \Fig{fig:cutoff_cdf} shows the cumulative distribution of webpage load time under each configuration. Each ($x$, $y$) point in the figure represents the portion of webpages ($y$) loaded within a certain delay ($x$). The big core with the peak frequency (1.2~GHz) achieves the best overall performance. It can load 96.5\% of the webpages within 3~seconds. As the frequency and core capability degrade, fewer webpages can be loaded within the same cut-off latency. Therefore, we choose the big core~(A9) with its peak frequency~(1.2~GHz) as the high-performance baseline.
+
+\paragraph{Energy savings} We evaluate the same 2,500 webpages that we used to assess the accuracy of the regression models. Assuming a 3~second cut-off latency, \Fig{fig:results_energy} shows the boxplot of per-webpage energy savings under the webpage-aware and OS schedulers against the high-performance mode. Both schedulers achieve significant energy savings over the high-performance baseline, with a (geometric) average of 83.6\% and 83.0\%, respectively. This is because both schedulers can schedule webpages to the lower power core or lower frequency.
 
 \begin{figure}[t]
 \subfloat[Distribution of per webpage energy saving against the baseline.]{
@@ -233,10 +243,6 @@ I propose event-based scheduling (EBS) as the mechanism to optimize energy-effic
 \subsection{Scheduling Unit}
 \label{sec:runtime:ebs:char}
 
-The scheduling unit in the event-based scheduler is the event handler. Whenever an event is triggered, a corresponding event handler is executed. \Fig{fig:runtime} provides an example, showing how event handlers H1, H2, and H3 (in that order) are pushed into the event queue for execution. For events that share the same performance constriant, we find that their event handlers have different execution latencies, and therefore lead to different performance slacks. We must treat each event handler differently and make scheduling decisions at that granularity.
-
-We explain the variation in the event handlers' execution behavior using the Ember.js-based todo list application. \Fig{fig:slack} shows the sorted execution latencies of all the event handlers. The $x$-axis corresponds to the event handlers and the $y$-axis corresponds to the event handlers' execution latencies. In this example, we assume that the performance target for the scheduler is 100~ms, which is a common performance target for a smooth responsiveness.
-
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=0.9\columnwidth]{slack}
@@ -244,22 +250,25 @@ We explain the variation in the event handlers' execution behavior using the Emb
 \label{fig:slack}
 \end{figure}
 
+The scheduling unit in the event-based scheduler is the event handler. Whenever an event is triggered, a corresponding event handler is executed. \Fig{fig:runtime} provides an example, showing how event handlers H1, H2, and H3 (in that order) are pushed into the event queue for execution. For events that share the same performance constriant, we find that their event handlers have different execution latencies, and therefore lead to different performance slacks. We must treat each event handler differently and make scheduling decisions at that granularity.
+
+We explain the variation in the event handlers' execution behavior using the Ember.js-based todo list application. \Fig{fig:slack} shows the sorted execution latencies of all the event handlers. The $x$-axis corresponds to the event handlers and the $y$-axis corresponds to the event handlers' execution latencies. In this example, we assume that the performance target for the scheduler is 100~ms, which is a common performance target for a smooth responsiveness.
+
 We observe a large latency variation for the handlers in~\Fig{fig:slack}. We label three of the application's representative event handlers as the application executes: \texttt{onkeyup},~\texttt{onchange}, and~\texttt{onclick}. The~\texttt{keyup} event handler only processes one keystroke and therefore finishes execution very quickly in just 2~ms, which leaves a large amount of slack (98\%) for the scheduler to exploit. In contrast, the~\texttt{onchange} event handler adds one entry into the todo list. It requires about 50~ms for execution, which translates to only about 50\% slack in performance. Lastly, the~\texttt{onclick} event handler deletes all the entries in the todo list. The processing time exceeds the performance constraint, and as such there is no opportunity to exploit performance slack. Instead, it requires a higher performance configuration, if available.
 
 \subsection{Scheduler Design Overview}
 \label{sec:runtime:ebs:overview}
 
-\begin{figure*}[t]
+The event-based scheduler predicts the ideal heterogeneous architecture execution configuration (i.e., a $\langle core, frequency \rangle$ tuple) whenever an event is triggered and the corresponding event handler is executed such that it ``barely'' meets the performance target with minimal energy consumption. It is important to emphasize that one event may lead to multiple frames being updated. Therefore, the \ebs runtime operates on a per-frame basis as frames are what ultimately dictate user perceivable experience. If an event execution only produces one frame, the runtime finds the ideal execution configuration for the single frame associated with the event. If an event's execution leads to a sequence of frames such as in an animation, the runtime continuously identifies the ideal execution configuration for each frame until all the frames associated with the event are produced. All the associated frames share the same QoS target of the event.
+
+The key idea of identifying an event's ideal execution configuration is to build a performance model and an energy model. They predict an event's latency and energy consumption under any core and frequency combination. With the two models, EBS sweeps all possible core and frequency combinations and selects the one that meets the QoS target with minimal energy.
+
+\begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{runtime}
 \caption{Event-based runtime scheduling framework.}
 \label{fig:runtime}
-\end{figure*}
-\label{sec:runtime:overview}
-
-The event-based scheduler predicts the ideal heterogeneous architecture execution configuration (i.e., a $\langle core, frequency \rangle$ tuple) whenever an event is triggered and the corresponding event handler is executed such that it ``barely'' meets the performance target with minimal energy consumption. It is important to emphasize that one event may lead to multiple frames being updated. Therefore, the \greenweb runtime operates on a per-frame basis as frames are what ultimately dictate user perceivable experience. If an event execution only produces one frame, the runtime finds the ideal execution configuration for the single frame associated with the event. If an event's execution leads to a sequence of frames such as in an animation, the runtime continuously identifies the ideal execution configuration for each frame until all the frames associated with the event are produced. All the associated frames share the same QoS target of the event.
-
-The key idea of identifying an event's ideal execution configuration is to build a performance model and an energy model. They predict an event's latency and energy consumption under any core and frequency combination. With the two models, EBS sweeps all possible core and frequency combinations and selects the one that meets the QoS target with minimal energy.
+\end{figure}
 
 The scheduler consists of a simple dispatch frontend and scheduling backend as illustrated in~\Fig{fig:runtime}. The frontend \textit{Dispatch} unit extracts relevant event information, and passes it to the backend. The backend consists of a \textit{Detector}, a \textit{Model Constructor} and a \textit{QoS Monitor}. The detector automatically identifies each event's QoS requirement. In its simplest form, the detector assumes a default latency target, such as 100~ms, for each event. If an event is annotated with programmer-guided QoS hints such as those enabled by the \greenweb language extensions as I will discuss in \Sect{sec:lang}, the detector can also extract the specified QoS information from the application. The model constructor builds a performance and energy model for each event. The models and event QoS information are then fed into the QoS monitor, which predicts the architecture configuration for executing an event while meeting the specified QoS target.
 
@@ -312,40 +321,29 @@ After the initial model construction, the QoS monitor keeps monitoring the event
 
 The monitor switches from fine-tuning an event handler's execution to recalibrating its model if it detects that the model is not performing well. We use a simple heuristic that is efficient in practice. If the model mispredicts (i.e., either underpredicts or overpredicts) more than four consecutive times, the monitor requests the model constructor to recalibrate.
 
-\paragraph{Overheads} The QoS monitor accounts for scheduling overheads, which consist of two components: the overhead of the scheduling algorithm itself and the overhead of changing the architecture configuration (i.e, big/little core migration and/or frequency scaling). The scheduling algorithm's overhead is dominated by model construction, which only requires solving a two-variable linear system that imposes almost negligible overhead. For changing the architecture's configuration, we assume 100~$\mu$s for frequency scaling and 20~$\mu$s for switching cores, as indicated in~\cite{arm-bl-sw-wp,arm-bl-wp}.
+\paragraph{Overheads} The QoS monitor accounts for scheduling overheads, which consist of two components: the overhead of the scheduling algorithm itself and the overhead of changing the architecture configuration (i.e, big/little core migration and/or frequency scaling). The scheduling algorithm's overhead is dominated by model construction, which only requires solving a two-variable linear system that imposes almost negligible overhead. For changing the architecture's configuration, we assume 100~$\mu$s for frequency scaling and 20~$\mu$s for switching cores, as discussed in \Sect{sec:runtime:exp}.
 
 \subsection{Experimental Setup}
-\label{sec:runtime:ebs:setup}
+\paragraph{Application Selection} \Tbl{tab:app_ebs} shows the applications we use for evaluation. We crawl them using HTTrack~\cite{httrack} and host them on our Web server to enable annotations (discussed later). We acknowledge that the network condition could be slightly better when accessing a local server. However, we believe it has minimal impact because many prior work has shown that computation dominates the performance and energy consumption for today's mobile Web applications~\cite{zhu2015role,huang2012close,big-little}. Overall, these applications cover a wide range of domains such as news, utility, etc., and are mostly among the top 200 websites as ranked by Alexa~\cite{alexa}.
 
-\paragraph{Software Infrastructure} We implement \greenweb and its runtime system in Google's open-source Chromium browser engine, which is used directly in the Chrome browser and is the core of many other popular browsers, such as Opera and Android's default browser. Our implementation is based on Chromium version 48.0.2549.0, which is the most recent version at the time of our work. The modified Chromium runs on unmodified Android version 4.2.2.
-
-\paragraph{Hardware Platform} We use the ODroid XU+E development board~\cite{odroidxue}, which contains an Exynos 5410 SoC that is known for powering the Samsung Galaxy S4. The Exynos 5410 SoC contains a representative ACMP architecture comprising an energy-hungry high-performance (big) core cluster and an energy-conserving low-performance (little) core cluster. The big and little clusters can be individually disabled and enabled. The big cores are ARM Cortex-A15 processors that operate between 800~MHz and 1.8~GHz at a 100~MHz granularity. The little cores are ARM Cortex-A7 processors that operate between 350~MHz and 600~MHz at a 50~MHz granularity. The frequency switching and core migration overhead is \SI{100}{\mu\second} and 20~$\mu$s, respectively~\cite{big-little,ebs}.
-
-\paragraph{Energy Measurement}  \greenweb focuses on the processor power consumption because the processor power has been steadily increasing and has gradually become the most significant power consumer in a mobile device compared to other components such as the screen and radio~\cite{mobilecpu}.
-
-We measure the processor power and energy consumption on real hardware as follows. The ODroid XU+E development board has built-in current sense resistors (\SI{10}{\milli\ohm}) for both the big and little cores. We use a National Instrument DAQ Unit X-series 6366 to collect voltage measurements at these sense resistors for the big and small CPU clusters at a rate of 1,000 samples per second, and thereby derive the power consumption. Energy consumption is computed by multiplying power with real execution time (\textit{not} the estimated time from the timing prediction model).
-
-\paragraph{Application Selection} \Tbl{tab:app} shows the applications we use for evaluation. We crawl them using HTTrack~\cite{httrack} and host them on our Web server to enable annotations (discussed later). We acknowledge that the network condition could be slightly better when accessing a local server. However, we believe it has minimal impact because many prior work has shown that computation dominates the performance and energy consumption for today's mobile Web applications~\cite{zhu2015role,huang2012close,big-little}. Overall, these applications cover a wide range of domains such as news, utility, etc., and are mostly among the top 200 websites as ranked by Alexa~\cite{alexa}.
-
-\paragraph{Baseline} We compare \greenweb with two baselines:
+\paragraph{Baseline} We compare \ebs with two baselines:
 \begin{itemize}
   \item \textit{Perf} is the policy that always runs the system at the peak performance, i.e., highest frequency in the big core in our setup. It is the standard policy for interactive applications to guarantee the best user QoS experience.
   
   \item \textit{Interactive} is Android's default \texttt{interactive} CPU governor designed specifically for interactive usages. It maximizes performance when the CPU recovers from the idle state, and then dynamically changes CPU performance as CPU utilization varies~\cite{android_cpufreq}.
 \end{itemize}
 
-\paragraph{Usage Scenarios} Real-world user study over one year span from the LiveLab project~\cite{livelab} shows that mobile users often have to interact with devices under different battery conditions. Therefore, we evaluate \greenweb under two primary usage scenarios based on battery status:
+\paragraph{Usage Scenarios} Real-world user study over one year span from the LiveLab project~\cite{livelab} shows that mobile users often have to interact with devices under different battery conditions. Therefore, we evaluate EBS under two primary usage scenarios based on battery status:
+
 \begin{itemize}
-  \item ``Imperceptible'' represents scenarios in which the battery budget is abundant, and users expect high QoS experience. It corresponds to the imperceptible QoS experience discussed in \Sect{sec:qos:target}. The imperceptible performance threshold $T_I$ is used as the QoS target.
+  \item ``Imperceptible'' represents scenarios in which the battery budget is abundant and users expect high QoS experience. Therefore, the target performance that \webrt must deliver is high. We will rigorously define ``imperceptibility'' in \Sect{sec:lang:eqos}.
   
-  \item ``Usable'' represents scenarios in which the battery budget is tight and users could tolerate lower performance. It corresponds to the usable QoS experience. The usable performance threshold $T_U$ is used as the QoS target.
+  \item ``Usable'' represents scenarios in which the battery budget is tight and users could tolerate lower performance. Therefore, the target performance that \webrt must deliver is lower than the ``imperceptible'' scenario. We will rigorously define ``usable'' in \Sect{sec:lang:eqos}.
 \end{itemize}
 
-It is worth noting that \textit{Perf} and \textit{Interactive} behave the same independently of the usage scenario. \greenweb under these two scenarios is denoted by \textit{GreenWeb-I} and \textit{GreenWeb-U}, respectively, in the rest of the evaluation.
+It is worth noting that \textit{Perf} and \textit{Interactive} behave the same independently of the usage scenario. \ebs under these two scenarios is denoted by \textit{\ebs-I} and \textit{\ebs-U}, respectively, in the rest of the evaluation.
 
-\paragraph{Reproducibility} We repeat every experiment that we study 3 times. Unless otherwise mentioned, the results we report are the median of all runs. We find the run-to-run variations are usually about 5\%, and do not affect our conclusions. We use Mosaic~\cite{mosaic}, a UI-level record and replay tool, to ensure consistent user interaction and to reduce human-induced noise across different runs on the same application.
-
-\input{tex/tables/workloads.tex}
+\input{tex/tables/workloads_ebs}
 
 \begin{figure}[t]
 \centering
@@ -357,68 +355,70 @@ It is worth noting that \textit{Perf} and \textit{Interactive} behave the same i
 \subsection{Evaluation}
 \label{sec:runtime:ebs:eval}
 
-\begin{figure}[t]
+\begin{figure}[p]
 \centering
-\subfloat[Architecture configuration distribution for \textit{GreenWeb-I}.]
+\subfloat[Architecture configuration distribution for \textit{\ebs-I}.]
 {
-        \includegraphics[trim=0 0 0 0, clip, width=1\columnwidth]{freq_dist_pi}
+        \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{freq_dist_pi}
         \label{fig:freq_dist_pi}
 }\\
-\subfloat[Architecture configuration distribution for \textit{GreenWeb-U}.]
+\vspace*{25pt}
+\subfloat[Architecture configuration distribution for \textit{\ebs-U}.]
 {
-        \includegraphics[trim=0 0 0 0, clip, width=1\columnwidth]{freq_dist_pu}
+        \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{freq_dist_pu}
         \label{fig:freq_dist_pu}
 }
-\caption{The architecture configuration distribution under the ``imperceptible'' (\textit{GreenWeb-I}) and ``usable''  (\textit{GreenWeb-U}) usage scenario.}
+\caption{The architecture configuration distribution under the ``imperceptible'' (\textit{\ebs-I}) and ``usable''  (\textit{\ebs-U}) usage scenario.}
 \label{fig:freq_dist}
 \end{figure}
 
-In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \greenweb. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
+In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \ebs. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
 
 We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
 
-\paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and \greenweb's two usage scenarios. The results are normalized to \textit{Perf}, and sorted in the ascending order of \textit{GreenWeb-I}. As compared to \textit{Interactive}, \greenweb achieves on average 29.2\% and 66.0\% energy saving under the imperceptible and usable usage scenarios, respectively.
+\paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and \ebs's two usage scenarios. The results are normalized to \textit{Perf}, and sorted in the ascending order of \textit{\ebs-I}. As compared to \textit{Interactive}, \ebs achieves on average 29.2\% and 66.0\% energy saving under the imperceptible and usable usage scenarios, respectively.
 
-\textit{Interactive} consumes energy close to \textit{Perf} across all applications, indicating that the Android \texttt{Interactive} governor is almost always operating at the peak performance. This is because user interactions, especially events with a ``continuous'' QoS type, typically generate a large volume of frames, which leads to high CPU utilization. \textit{Interactive} responds to the high CPU utilization by increasing CPU performance. With the QoS knowledge provided by developers, however, \greenweb can identify execution configurations that conserve energy while still meeting QoS requirements.
+\textit{Interactive} consumes energy close to \textit{Perf} across all applications, indicating that the Android \texttt{Interactive} governor is almost always operating at the peak performance. This is because user interactions, especially events with a ``continuous'' QoS type, typically generate a large volume of frames, which leads to high CPU utilization. \textit{Interactive} responds to the high CPU utilization by increasing CPU performance. With the QoS knowledge provided by developers, however, \ebs can identify execution configurations that conserve energy while still meeting QoS requirements.
 
-\paragraph{Architecture Configuration Distribution} To better understand the sources of energy savings of \greenweb, we examine the architecture configuration distribution of \greenweb under the imperceptible and usable usage scenario shown in \Fig{fig:freq_dist_pi} and \Fig{fig:freq_dist_pu}, respectively. Bars with darker colors indicate higher performance configurations.
+\paragraph{Architecture Configuration Distribution} To better understand the sources of energy savings of \ebs , we examine the architecture configuration distribution of \ebs under the imperceptible and usable usage scenario shown in \Fig{fig:freq_dist_pi} and \Fig{fig:freq_dist_pu}, respectively. Bars with darker colors indicate higher performance configurations.
 
-We make two notable observations from the distribution results. First, \greenweb tends to bias toward big core (A15) configurations much more often under the imperceptible scenario (\Fig{fig:freq_dist_pi}) than under the usable scenario (\Fig{fig:freq_dist_pu}). This observation confirms the result that \textit{GreenWeb-I} has less energy saving than \textit{GreenWeb-U}. Second, the fact the \greenweb dynamically changes its execution configuration under different QoS targets indicates that the \greenweb can adapt to different user QoS expectations while saving energy. In contrast, \textit{Interactive} always adopts the same scheduling policy independent of the user QoS expectation, leading to energy waste. This observation indicates that an ACMP architecture is beneficial in mobile Web, but the burden is on the runtime system to intelligently leverage it.
+We make two notable observations from the distribution results. First, \ebs tends to bias toward big core (A15) configurations much more often under the imperceptible scenario (\Fig{fig:freq_dist_pi}) than under the usable scenario (\Fig{fig:freq_dist_pu}). This observation confirms the result that \textit{\ebs-I} has less energy saving than \textit{\ebs-U}. Second, the fact the \ebs dynamically changes its execution configuration under different QoS targets indicates that the \ebs can adapt to different user QoS expectations while saving energy. In contrast, \textit{Interactive} always adopts the same scheduling policy independent of the user QoS expectation, leading to energy waste. This observation indicates that an ACMP architecture is beneficial in mobile Web, but the burden is on the runtime system to intelligently leverage it.
 
 \begin{figure}[t]
   \centering
   \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{freq_switch}
-  \caption{Execution configuration switching frequency under \textit{GreenWeb-I} and \textit{GreenWeb-U}. Two configuration switching types exist: CPU frequency switch (solid) and core migrations (stripe).}
+  \caption{Execution configuration switching frequency under \textit{\ebs-I} and \textit{\ebs-U}. Two configuration switching types exist: CPU frequency switch (solid) and core migrations (stripe).}
   \label{fig:freq_switch}
 \end{figure}
 
-\paragraph{Configuration Switching Frequency} Complementary to the distribution of architecture configuration, \Fig{fig:freq_switch} shows the switching frequency of architecture configuration in \textit{GreenWeb-I} and \textit{GreenWeb-U}. We decompose the configuration switching into two categories: CPU frequency change and core migration (between big and little clusters). Thus, \Fig{fig:freq_switch} is shown as a stacked bar plot where the frequencies of both categories are stacked for each application.
+\paragraph{Configuration Switching Frequency} Complementary to the distribution of architecture configuration, \Fig{fig:freq_switch} shows the switching frequency of architecture configuration in \textit{\ebs-I} and \textit{\ebs-U}. We decompose the configuration switching into two categories: CPU frequency change and core migration (between big and little clusters). Thus, \Fig{fig:freq_switch} is shown as a stacked bar plot where the frequencies of both categories are stacked for each application.
 
-We draw three conclusions from the switching frequency statistics. First, \greenweb introduces only modest configuration switching (20\% on average). Recall from \Sect{sec:eval:setup} that the CPU frequency switching and core migration incur overhead only to the order of $\mu$s, much smaller than the QoS target which is typically to the order of millisecond. Therefore, the execution configuration has minimal performance impact.
+We draw three conclusions from the switching frequency statistics. First, \ebs introduces only modest configuration switching (20\% on average). Recall from \Sect{sec:runtime:exp} that the CPU frequency switching and core migration incur overhead only to the order of $\mu$s, much smaller than the QoS target which is typically to the order of millisecond. Therefore, the execution configuration has minimal performance impact.
 
-Second, for most of applications \textit{GreenWeb-I} incurs more switchings than \textit{GreenWeb-U}. This is unsurprising because as compared to \textit{GreenWeb-U}, \textit{GreenWeb-I} optimizes for a tighter QoS target, which is more sensitive to frame (phase) variance and more vulnerable to frame performance mis-prediction. In contrast, a more relaxed QoS target is more robust against frame variance. Our results suggest that a better frame performance predictor such as the profiling-guided prediction~\cite{pgdvfs} would be helpful in reducing the execution configuration switching in the imperceptible mode.
+Second, for most of applications \textit{\ebs-I} incurs more switchings than \textit{\ebs-U}. This is unsurprising because as compared to \textit{\ebs-U}, \textit{\ebs-I} optimizes for a tighter QoS target, which is more sensitive to frame (phase) variance and more vulnerable to frame performance mis-prediction. In contrast, a more relaxed QoS target is more robust against frame variance. Our results suggest that a better frame performance predictor such as the profiling-guided prediction~\cite{pgdvfs} would be helpful in reducing the execution configuration switching in the imperceptible mode.
 
 Third, the CPU frequency change dwarfs core migrations and dominates the configuration switching. Thus, fast DVFS is desired. Our results suggest that a fast on-chip voltage regulator that is increasingly prevalent in server processors~\cite{fivr,ivr} is also beneficial in mobile CPUs.
 
-\begin{figure}[t]
+\begin{figure}[p]
 \centering
 \subfloat[QoS violation comparison under the imperceptible usage scenario.]
 {
-        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pi_results_f}
+        \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{qos_pi_results_f}
         \label{fig:qos_pi_results_f}
 }\\
+\vspace*{25pt}
 \subfloat[QoS violation comparison under the usable usage scenario.]
 {
-        \includegraphics[trim=0 0 0 0, clip, width=.6\columnwidth]{qos_pu_results_f}
+        \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{qos_pu_results_f}
         \label{fig:qos_pu_results_f}
 }
-\caption{QoS violations are presented as additional violations on top of \textit{Perf}.}
+\caption{QoS violations are presented as additional violations on top of \textit{Perf}. The $y$-axis of the two figures are kept the same for comparion purposes.}
 \label{fig:full_results}
 \end{figure}
 
-\paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and \greenweb under the imperceptible and usable scenarios, respectively. On average, \greenweb introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in the microbenchmarks because the interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
+\paragraph{QoS Violation} \Fig{fig:qos_pi_results_f} and \Fig{fig:qos_pu_results_f} show the QoS violation of \textit{Interactive} and \ebs under the imperceptible and usable scenarios, respectively. On average, \ebs introduces 0.8\% and 0.6\% more QoS violations than \textit{Perf} under the imperceptible and usable scenarios, respectively. The QoS violations are lower than in the microbenchmarks because the interaction duration gets longer and the QoS violations caused by profiling runs are amortized.
 
-Compared to \textit{Interactive}, \greenweb has similar, in some cases fewer, QoS violations. Considering the significant energy savings, we conclude that the QoS-aware \greenweb system can use energy more wisely by being aware of user QoS expectations. Overall, \greenweb achieves better energy efficiency than the QoS-agnostic \textit{Interactive} scheme.
+Compared to \textit{Interactive}, \ebs has similar, in some cases fewer, QoS violations. Considering the significant energy savings, we conclude that the QoS-aware \ebs system can use energy more wisely by being aware of user QoS expectations. Overall, \ebs achieves better energy efficiency than the QoS-agnostic \textit{Interactive} scheme.
 
 \section{Related Work}
 \label{sec:runtime:related}
