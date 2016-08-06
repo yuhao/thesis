@@ -288,11 +288,11 @@ Second, a very small number of DOM cache entries guarantee a high hit rate. Ther
 
 To access a particular DOM tree node in the rendering engine, developers issue~\texttt{DOMCache\_LD(Id, attr)} and~\texttt{DOMCache\_ST(Id, attr, data)} for read and write operation, respectively. Similar APIs are also provided for the Render Cache. In the provided APIs, \texttt{Id} represents the DOM tree node ID (similar to the \texttt{Style\_Apply()} API), \texttt{attr} represents a particular DOM node attribute, and \texttt{data} indicates the new data of the specified \texttt{attr}. Recall that our DOM cache design allows each attribute of a DOM node to be individually addressed~(\Sect{sec:cache:hw}). The syntax of both APIs allow developers to fully utilize this feature.
 
-\begin{figure}[b]
+\begin{figure}[t]
 \centering
 \captionsetup{width=\columnwidth}
-\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{style-code-cache}
-\caption{Using the \texttt{DOMCache\_ST()} API in the rendering engine. The new DOM attribute store API replaces the original attribute value assignment, and performs cache manegement.}
+\includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{style-code-cache}
+\caption{Using the \texttt{DOMCache\_ST()} API in the rendering engine. The new DOM attribute store API (line 4 in the new code) replaces the original attribute value assignment (line 4 in the original code), and performs cache management.}
 \label{fig:style-code-cache}
 \end{figure}
 

@@ -118,20 +118,17 @@ Developers do not have to specify the QoS target values; the \greenweb runtime w
 The proposed QoS-aware \greenweb APIs support a wide range of Web application interaction patterns. We explore different usages using two examples.
 
 \begin{figure}[t]
-\centering
-\subfloat[Express the QoS type of \texttt{ontouchstart} event as ``continuous,'' and use the default $P_I$ and $P_U$ values.]
-{
-	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{csstransition}
-	\label{fig:csstransition}
-}
-\hspace*{15pt}
-\subfloat[Express the QoS type of \texttt{ontouchmove} event as ``continuous,'' and use 20~ms and 100~ms as the new QoS targets.]
-{
-	\includegraphics[trim=0 0 0 0, clip, width=.45\columnwidth]{raf}
-	\label{fig:raf}
-} 
-\caption{Example \greenweb usage.}
-\label{fig:ex}
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{csstransition}
+  \caption{Express the QoS type of \texttt{ontouchstart} event as ``continuous,'' and use the default $P_I$ and $P_U$ values.}
+  \label{fig:csstransition}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[trim=0 0 0 0, clip, width=.9\columnwidth]{raf}
+  \caption{Express the QoS type of \texttt{ontouchmove} event as ``continuous,'' and use 20~ms and 100~ms as the new QoS targets.}
+  \label{fig:raf}
 \end{figure}
 
 \paragraph{Animations via CSS Transition} The first example involves annotating events that achieve animation using a CSS transition. A CSS transition lets developers specify the initial and end state of an animation and how long the transition takes, while leaving the transition implementation to the Web browser~\cite{csstransitions}. \Fig{fig:csstransition} shows an example in which the transition of the \texttt{width} property of a \texttt{div} element is animated. The initial \texttt{width} property is set to 100px (line 4). The style declaration ``\texttt{transition: width 2s;}'' at line 5 indicates that whenever the \texttt{width} property is reset, the transition will begin and finish in 2 seconds. Later when users click the \texttt{<div>} element, the \texttt{animateExpanding} callback is executed (line 19), which sets the \texttt{width} property to 500px, triggering the 2-second animation.
