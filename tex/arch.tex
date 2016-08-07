@@ -61,7 +61,7 @@ Unless stated otherwise, we define Web application load time as the execution ti
 
 We intentionally relax the design parameters beyond the current mobile systems in order to allow an exhaustive design space exploration. For example, we consider up to 128~KB L1 cache design whereas most L1 caches in existing mobile processors are 32~KB in size. Also, since thermal design power (TDP) is important for mobile SoCs, we eliminate overly aggressive designs with more than 2~W TDP.
 
-We assume a fixed core frequency in our design-space exploration. We use 1.6~GHz, a common value in mobile processors~\cite{snapdragon-wiki,exynos-wiki}, to further prune the exploration space. However, because the latency of both the L1 and L2 caches can still vary, we include different cache designs in the exploration space.
+We assume a fixed core frequency in our design-space exploration. We use 1.6~GHz, a common value in mobile processors, to further prune the exploration space. However, because the latency of both the L1 and L2 caches can still vary, we include different cache designs in the exploration space.
 
 We use a constant memory latency to model the memory subsystem because we do not observe significant impact of the memory system on the mobile Web browsing workload. According to hardware measurements on the Cortex-A15 processor using ARM's performance monitoring tool Streamline~\cite{streamline}, the MPKI for the L2 cache across all the webpages is below 5. We observe similar low L2 MPKI, i.e. low main memory pressure, in our simulations. Therefore, we use a simpler memory system to further trim the search space.
 
