@@ -1,9 +1,11 @@
-%!TEX root=paper.tex
+%!TEX root=../paper.tex
 
 \chapter{Retrospective and Prospective Remarks}
 \label{sec:conc}
 
-\paragraph{Retrospective} As a promising first step, my proposal explores the feasibility of a holistic system design to improve the energy-efficiency of mobile Web computing while delivering user satisfaction. It argues that the traditional interfaces across the Web computing stack should be enhanced with new abstractions for QoS and hardware. It demonstrates three general principles:
+\section{Retrospective}
+
+As a promising first step, my proposal explores the feasibility of a holistic system design to improve the energy-efficiency of mobile Web computing while delivering user satisfaction. It argues that the traditional interfaces across the Web computing stack should be enhanced with new abstractions for QoS and hardware. It demonstrates three general principles:
 
 \begin{itemize}
   \item \textsc{Empowering Developers~~} Web developers today must be conscious of energy-efficiency because of increasing user awareness. Current application/runtime abstractions, however, do not provide developers opportunities to optimize for energy-efficiency. Pure runtime-based techniques are QoS-agnostic. A key principle in my proposal is that developers should be integrated into the energy optimization loop by empowering them to express user QoS expectations at an abstract level. \greenweb demonstrates the first step.
@@ -13,7 +15,7 @@
   \item \textsc{General-Purpose vs. Specialization~~} Ultimately future mobile processor designs have to improve both the performance and energy-efficiency simultaneously, not just making trade-offs between the two design goals. Architectural specialization comes as a first choice to achieve both improvements. However, I argue that retaining the general-purpose programmability during the specialization process is of critical importance for the Web stack because of its inherent complexity. \webcore starts from a (well-customized) general-purpose design and incorporates modest specialization for the most lucrative target.
 \end{itemize}
 
-\paragraph{Prospective} I discuss three key steps in generalizing the principles and improving the proposal.
+\section{Prospective} I discuss three key steps in generalizing the principles and improving the proposal.
 
 \begin{itemize}
   \item \textsc{Easing Developers' Effort~~} Although developers must be empowered, they should not be over-burdened. A key limitation of the current \greenweb proposal is that it requires developers to manually annotate Web applications with QoS information. To make \greenweb more practical, I will explore the feasibility of automatically applying \greenweb annotations.
