@@ -3,36 +3,51 @@
 \chapter{Retrospective and Prospective Remarks}
 \label{sec:conc}
 
+This chapter provides retrospective and prospective views of my dissertation work. The retrospective part (\Sect{sec:conc:retro}) distills three principles developed from my work on building a high-performance while energy-efficient mobile Web computing system. The prospective part (\Sect{sec:conc:pros}) suggests next steps for generalizing the principles and outlines lucrative research items.
+
 \section{Retrospective}
+\label{sec:conc:retro}
 
-As a promising first step, my proposal explores the feasibility of a holistic system design to improve the energy-efficiency of mobile Web computing while delivering user satisfaction. It argues that the traditional interfaces across the Web computing stack should be enhanced with new abstractions for QoS and hardware. It demonstrates three general principles:
-
-\begin{itemize}
-  \item \textsc{Empowering Developers~~} Web developers today must be conscious of energy-efficiency because of increasing user awareness. Current application/runtime abstractions, however, do not provide developers opportunities to optimize for energy-efficiency. Pure runtime-based techniques are QoS-agnostic. A key principle in my proposal is that developers should be integrated into the energy optimization loop by empowering them to express user QoS expectations at an abstract level. \greenweb demonstrates the first step.
-  
-  \item \textsc{Exposing Hardware Complexity~~} Mobile system-on-chip (SoC) designs are undergoing rapid design iteration and innovation with each generation incorporating more complex cores and accelerators. Future Web browser runtimes must embrace the unprecedented hardware complexity. To enable that, traditional runtime/architecture interfaces must be enhanced to expose a certain level of hardware details. \webrt demonstrates the potential of exposing CPU core type and frequency and designing the Web runtime accordingly.
-  
-  \item \textsc{General-Purpose vs. Specialization~~} Ultimately future mobile processor designs have to improve both the performance and energy-efficiency simultaneously, not just making trade-offs between the two design goals. Architectural specialization comes as a first choice to achieve both improvements. However, I argue that retaining the general-purpose programmability during the specialization process is of critical importance for the Web stack because of its inherent complexity. \webcore starts from a (well-customized) general-purpose design and incorporates modest specialization for the most lucrative target.
-\end{itemize}
-
-\section{Prospective} I discuss three key steps in generalizing the principles and improving the proposal.
+As a promising first step, my proposal explores the feasibility of a holistic system design to improve the energy-efficiency of mobile Web computing while delivering user satisfaction. It argues that the traditional interfaces across the Web computing stack should be enhanced with new abstractions for QoS and hardware. Overall, it demonstrates three general principles:
 
 \begin{itemize}
-  \item \textsc{Easing Developers' Effort~~} Although developers must be empowered, they should not be over-burdened. A key limitation of the current \greenweb proposal is that it requires developers to manually annotate Web applications with QoS information. To make \greenweb more practical, I will explore the feasibility of automatically applying \greenweb annotations.
+  \item \textsc{Empowering Web Developers Without Overburdening Them} Web developers today must be conscious of energy-efficiency because of increasing user awareness. Current application/runtime abstractions, however, do not provide developers opportunities to optimize for energy-efficiency. Pure runtime-based techniques are QoS-agnostic. A key principle in my work is that developers should be integrated into the energy optimization loop. \greenweb (\Sect{sec:lang}) demonstrates a first step by empowering developers to express user QoS expectations as program annotations. The QoS annotations guide the runtime to make a calculated trade-off between performance and energy consumption. Meanwhile, to incentivize a wide usage of \greenweb-like annotations, it is critical to ease developers' manual annotation efforts. \autogreen framework explores the feasibility of automatic annotation with promising results.
   
-  The rationale for designing an automatic annotation system is twofold. First, some Web developers may not want to spend the extra effort of manual annotation, such as for legacy applications whose code logic might be obscure. Second, in complex Web applications with many DOM events, manually going through all events and identifying their QoS type and QoS target could be cumbersome. In both cases, an automated system would automatically find all the events and annotates them with the two QoS abstractions, enabling QoS-aware energy-efficiency optimizations without developers' intervention.
+  \item \textsc{Exposing Architecture Details Without Losing Generality} Mobile system-on-chips (SoC) undergo rapid design iterations with each generation incorporating more complex cores and IP blocks. A Web runtime system must embrace, but does not overly couple with, the unprecedented hardware complexity. A guiding principle for system designers is that the runtime/architecture interface should be enhanced with new abstractions---abstractions that expose enough hardware details while not imposing too strict constraints on runtime implementation. \webrt (\Sect{sec:runtime}) is a concrete example of this principle where processor core type and core frequency in an ACMP architecture are exposed as two new abstractions to the Web runtime. The two new hardware abstractions enable a large performance-energy scheduling space while do not impose any constraints how the scheduling should be implemented.
   
-  I will also evaluate the trade-off between automatic and manual annotation. Specifically, I will use three metrics: coverage, accuracy, and effort. \textit{Coverage} is measured by the percentage of events that can be annotated. \textit{Accuracy} is assessed by whether an event's QoS type and QoS target information can be correctly annotated. \textit{Effort} is measured by the amount of time required to perform annotation. Intuitively, the manual annotation approach can achieve 100\% coverage at 100\% accuracy--after all, developers have all the knowledge of the exact application logic, theoretically. However, manual annotation would also lead to significant annotation effort, especially for production-scale Web applications. On the other hand, the automatic annotation approach would require much less annotation effort with the caveat of not being able to reach a perfect accuracy and coverage. My future work will quantify such a comparison and make a step further toward pushing \greenweb to practice.
- 
-  \item \textsc{Composability of GreenWeb~~} There are two aspects of composability that need to be addressed: program-level and abstraction-level. At the program level, an ideal \greenweb-annotated program can be integrated with other non-annotated code while ensuring functionality (correctness). After all, \greenweb extensions concern with QoS and traditional language constructs concern with functionality (correctness). This composability ensures a \textit{separation of concerns} between QoS and functionality (correctness) in Web programming.
-  
-  The program-level composability also allows developers to annotate applications that make use of close-sourced libraries. For example, even if an event callback is implemented using a third-party animation library API whose source code is not available, developers should still be able to specify the event's QoS type as ``continuous'' as long as the API is guaranteed to produce an animation. This capability allows QoS annotations to remain largely unchanged even when a library's actual implementation evolves over time.
-  
-  In my planned work toward thesis defense, I will evaluate the program-level composability as it is a short-term concern that affects the usability of \greenweb extensions. The key is to make sure that the  runtime implementation of QoS annotations is ``sandboxed'' and does not leak information to the ``functionality world.'' In this way, even when an QoS annotation is erroneous the application's functionality and correctness will not be interfered with.
-  
-  The other aspect of composability is at the QoS abstraction level. It is not clear if one can easily express a new QoS abstraction based on the two proposed QoS abstractions, QoS type and QoS target. The next step of Web language research should understand how to design QoS ``primitives,'' based on which complex, higher-level QoS abstractions can be easily composed. This composability is critical in the long term when we will see new user interaction forms and new ways that users assess QoS experience. Enumerating every single type of QoS in a programming model is not scalable. With composability at the QoS abstraction level, however, a Web programming model could simply provide a library that lets developers construct different QoS specifications in a completely customized way.
-  
-  I will leave the abstraction-level composability for the next phase of research because it is a long-term concern that involves extensively surveying future human-computer interaction forms and new QoS specifications. I believe that the QoS type and QoS target abstractions are sufficient for expressing predominant QoS specifications on today's mobile devices.
-   
-  \item \textsc{Self-adaptive Web Runtime~~} The Web is becoming a universal application development platform in the Internet-of-Things era. The underlying Web runtime is facing a unique challenge of operating on different device capabilities and in vastly different environments with different QoS, energy, and reliability constraints. The future Web runtime must be self-adaptive. As a first step, I will conduct two research items. First, I will evaluate the sensitivity of \webrt with respect to different QoS targets. For example, I will understand can the webpage-aware scheduler achieve the same level of energy savings when the cut-off latency is relaxed. Second, I will evaluate the sensitivity of \webrt on mobile devices with different capabilities. For instance, I will evaluate \webrt on an ARM Cortex A7 processor to mimic a smartwatch-level processor (as opposed to a smartphone).
+  \item \textsc{Balancing Programmability With Domain Specialization} Ultimately mobile processor architecture designs will have to improve both the performance and energy-efficiency simultaneously, not just making trade-offs between the two design goals. Architectural specialization comes as the first choice to achieve both improvements. However, I argue that retaining the general-purpose programmability during the specialization process is of critical importance for the Web stack because of its inherent complexity. \webcore (\Sect{sec:arch}) demonstrates one approach of balancing programmability and specialization by starting from a (well-customized) general-purpose design and incrementally incorporating modest specializations for the most lucrative software targets.
 \end{itemize}
+
+\section{Prospective}
+\label{sec:conc:pros}
+
+The future of mobile Web computing is undoubtedly exciting. It is exciting not only because of the intellectual challenges it poses, but also because of its applicability to our everyday life and its profound impact on our society. Guided by the principles described in the previous chapter, I outline a few open problems that are critical to the next era of mobile Web computing.
+
+\begin{itemize}
+  \item \textsc{Composability of QoS Abstractions~~} As mobile application domains such as virtual reality and augment reality become more mainstream, new forms of user interaction (e.g., through nose~\cite{nosewatch}, visible light~\cite{license}) will emerge and as such users will have new ways of assessing their QoS experience. Although the QoS type and QoS target abstractions proposed in this work are sufficient for expressing QoS specifications in \textit{today}'s mobile applications, it is not clear how to express a new QoS abstraction in the context of \textit{future} mobile applications.
+  
+  To express semantics of new QoS specifications, the next step of Web language research should understand how to design ``primitive'' QoS abstractions, based on which complex, higher-level QoS abstractions can be easily composed. The composability of QoS abstractions is critical because enumerating every single possible kind of QoS experience in a Web programming model is not scalable. Instead, the Web programming model should ideally provide a QoS primitive library that lets developers construct different QoS specifications in a completely customized way.
+  
+  To achieve this goal will likely involve an intimate collaboration between the system and human-computer interaction community. Breakthroughs in neuropsychology research that seeks to construct fundamental human perception models will also play an important role.
+     
+  \item \textsc{Scalable Web Runtime~~} If today's hardware systems that a mobile Web runtime has to manage, e.g., an ACMP architecture, are already complex, the complexity in tomorrow's mobile hardware will be unprecedented. For instance, Apple's mobile SoCs have dozens of specialized IP blocks occupying more than half of the die area~\cite{cachehw}. ITRS projects that the number of specialized IP blocks will reach upwards of 100$X$ more than today by 2022. What further adds to the hardware complexity is the fragmentation issue where, for instance, one IoT device will have non-standard, vendor-customized, and application-specific hardware components that are not found in any other devices.
+  
+  Future mobile Web runtime should effectively manage the hardware complexity in order to fully take advantage of the hardware capability. The challenge of the runtime design is one of scalability. On one hand, a monolithic design that appeals to all existing IP blocks is unscalable because the performance and energy overheads accumulate as the number of IP blocks surges. On the other hand, a completely customized runtime tailored for the specifics of a particular device is unscalable either in that the software vendors would have to distribute different runtime versions based on different device capabilities, essentially transferring the burden of managing hardware complexity to managing software complexity.
+  
+  An ideal mobile Web runtime should strike a balance between the two extremes, allowing one piece of software to be distributed across all devices while providing flexibilities to support hardware components unique to each device. One promising approach is to borrow the principles of the microkernel-based OS design: a minimal runtime kernel equipped with loadable modules, each dealing with one or one group of hardware IPs.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
