@@ -174,18 +174,11 @@ On the other hand, \webrt does not assume how the QoS requirements is provided t
 \section{Evaluation}
 \label{sec:lang:eval}
 
-We evaluate \greenweb in three different aspects. First, we evaluate the \textit{necessity} of \greenweb APIs (\Sect{sec:lang:eval:need}). That is, can a Web runtime automatically infer events' QoS information without developers explicitly providing hints? Second, we evaluate the ``effectiveness'' of the \greenweb APIs (\Sect{sec:lang:eval:effect}). That is, given the annotated QoS information, can a Web runtime effectively optimizes for energy-efficiency while meeting the QoS expectations? Finally, we evaluate the annotation effort in apply \greenweb APIs to Web application (\Sect{sec:lang:eval:annotate}). That is, is the annotation effort lightweight enough to incentive developers to use \greenweb APIs?
+We evaluate \greenweb in two different aspects. First, we evaluate the ``effectiveness'' of the \greenweb APIs (\Sect{sec:lang:eval:effect}). That is, given the annotated QoS information, can a Web runtime effectively optimizes for energy-efficiency while meeting the QoS expectations? Finally, we evaluate the annotation effort in apply \greenweb APIs to Web application (\Sect{sec:lang:eval:annotate}). That is, is the annotation effort lightweight enough to incentive developers to use \greenweb APIs?
 
-To evaluate \greenweb we implement a \webrt-based \greenweb runtime--although note that \webrt and \greenweb are independent as discussed in \Sect{sec:lang:inter}. In particular, the \webrt implementation is exactly the same as what we described in \Sect{sec:runtime}, i.e., based on the ACMP architecture. The software and hardware platform we use the evaluate \greenweb is the same as described in \Sect{sec:runtime:exp}. In addition, we base our evaluation on the same set of applications that are used in evaluating \ebs in \Sect{sec:runtime:ebs:eval}. The details of each application in shown in \Tbl{tab:app}
+To evaluate \greenweb we implement a \webrt-based \greenweb runtime--although note that \webrt and \greenweb are independent as discussed in \Sect{sec:lang:inter}. In particular, the \webrt implementation is exactly the same as what we described in \Sect{sec:runtime}, i.e., based on the ACMP architecture. The software and hardware platform we use to the evaluate \greenweb is the same as described in \Sect{sec:runtime:exp}. In addition, we base our evaluation on the same set of applications that are used in evaluating \ebs in \Sect{sec:runtime:ebs:eval}. The details of each application in shown in \Tbl{tab:app}
 
 \input{tex/tables/workloads_lang}
-
-\subsection{Manual Annotation vs. Runtime Mechanism}
-\label{sec:lang:eval:need}
-
-As an alternative to receiving QoS annotations (e.g., using \greenweb APIs) from developers, the Web runtime could try to detect QoS information at runtime without language hints. One implementation is to implement the exact logic of \autogreen within the Web runtime. However, there are three major drawbacks of such a runtime-based approach.
-
-First, implementing the QoS detection at runtime is not scalable. For example, whenever the Web standard introduces a new method of implementing animation (i.e., ``continuous'' QoS type) the browser runtime has to be extended to support it. In contrast, with developers directly specifying the QoS type the runtime can confidently optimize for the ``continuous'' QoS type without having to know how an animation is implemented. Second, a pure runtime strategy cannot precisely detect the QoS target information of an event for exactly the same reason that \autogreen cannot precisely detect QoS target. Third, detecting QoS at runtime also introduces runtime performance and energy overhead that could potentially offset the energy saving benefits.
 
 \subsection{Energy-Efficiency Improvement}
 \label{sec:lang:eval:effect}
@@ -237,6 +230,10 @@ Overall, it took us about 5 $\sim$10 minutes to annotate each application with t
 
 \section{Discussion}
 \label{sec:lang:disc}
+
+\paragraph{Manual Annotation vs. Runtime Mechanism} As an alternative to receiving QoS annotations (e.g., using \greenweb APIs) from developers, the Web runtime could try to detect QoS information at runtime without language hints. One implementation is to implement the exact logic of \autogreen within the Web runtime. However, there are three major drawbacks of such a runtime-based approach.
+
+First, implementing the QoS detection at runtime is not scalable. For example, whenever the Web standard introduces a new method of implementing animation (i.e., ``continuous'' QoS type) the browser runtime has to be extended to support it. In contrast, with developers directly specifying the QoS type the runtime can confidently optimize for the ``continuous'' QoS type without having to know how an animation is implemented. Second, a pure runtime strategy cannot precisely detect the QoS target information of an event for exactly the same reason that \autogreen cannot precisely detect QoS target. Third, detecting QoS at runtime also introduces runtime performance and energy overhead that could potentially offset the energy saving benefits.
 
 \paragraph{Effectiveness in a Multi-application Environment} The ACMP-based \greenweb runtime implementation presented here assumes that all CPU resources in a SoC are available to the foreground Web application during scheduling. We believe that this ACMP-based runtime design is also applicable when multiple mobile applications are concurrently consuming CPU resources. The reason is two-fold.
 
