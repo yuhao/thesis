@@ -345,15 +345,47 @@ It is worth noting that \textit{Perf} and \textit{Interactive} behave the same i
 
 \input{tex/tables/workloads_ebs}
 
+\subsection{Evaluation}
+\label{sec:runtime:ebs:eval}
+
+In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \ebs. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
+
+We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
+
+\begin{figure}[t]
+\centering
+\includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{paperjs_trace}
+\caption{The event execution trace of Paper.js under three different runtime schemesr.}
+\label{fig:paperjs_trace}
+\end{figure}
+
+\begin{figure}[t]
+        \subfloat[\small{Latency model validation.}]{
+                \includegraphics[trim=0 0 0 0, clip, width=0.45\columnwidth]{delay_model}
+                \label{fig:delay_model}
+        }
+        \subfloat[\small{Energy model validation.}]{
+                \includegraphics[trim=0 0 0 0, clip, width=0.45\columnwidth]{energy_model}
+                \label{fig:energy_model}
+        }
+        \caption{\small The latency and energy model accuracy for \texttt{Paper.js}, which has the median accuracy of all the applications.}
+        \label{fig:model_pred}
+\end{figure}
+
+\paragraph{Representative Study} We first use \texttt{Paper.js} to illustrate the effectiveness of the runtime system.~\Fig{fig:paperjs_trace} shows three representative snapshots of \texttt{Paper.js}. The~\textit{x}-axis shows the event sequence during the execution because our runtime system works at the event granularity, and the~\textit{y}-axis shows the QoS under three different runtime management schemes: one always optimizes for the lowest energy (Energy), one always optimizes for highest performance (Perf), and the event-based scheduler (EBS). In this example, we set the QoS target to 50~ms. Intuitively, as the actual QoS nears the QoS target (without violating it), less energy is consumed.
+
+We take three snapshots throughout application execution to discuss in more detail. The first snapshot shows the initial calibration period, which constructs the predictive QoS model.~\Fig{fig:model_pred} shows the accuracy of the model constructed for \texttt{Paper.js} by comparing the measured event latency to the predicted latency for each frequency. As shown, our simplified achieves an average error~\textless 0.3\%. As a result, the runtime system in the calibration mode settles down quickly after the fifth run. The near-perfect accuracy and low performance overhead justifies our model simplification decision.
+
+After calibration, the runtime enters monitoring mode. The second snapshot in~\Fig{fig:paperjs_trace} illustrates typical operation for monitoring mode when events are so lightweight they could solely meet QoS on the most energy-optimized performance configurations. However, such a scheme is infeasible because event behavior is not known a priori. Our runtime system is able to quickly adapt to the constant influx of simple events to achieve behavior similar to energy-oriented optimization scheme.
+
+The third snapshot illustrates an application phase with more complex events where the energy-oriented scheme is rarely able to meet the QoS target. Although the performance scheme maximizes the likelihood to meet the QoS requirement, it results in excessively high energy consumption. Our eQoS runtime intelligently provisions architecture resources to prolong execution within the target QoS bounds. Exploiting the QoS gap between peak QoS and target QoS results in a significant energy savings.
+
 \begin{figure}[t]
 \centering
 \includegraphics[trim=0 0 0 0, clip, width=\columnwidth]{energy_results_f}
 \caption{Energy consumption normalized to \textit{Perf}. Lower is better.}
 \label{fig:energy_results_f}
 \end{figure}
-
-\subsection{Evaluation}
-\label{sec:runtime:ebs:eval}
 
 \begin{figure}[p]
 \centering
@@ -371,10 +403,6 @@ It is worth noting that \textit{Perf} and \textit{Interactive} behave the same i
 \caption{The architecture configuration distribution under the ``imperceptible'' (\textit{\ebs-I}) and ``usable''  (\textit{\ebs-U}) usage scenario.}
 \label{fig:freq_dist}
 \end{figure}
-
-In this section, we perform a sequence of interactions on each application, and evaluate the end-to-end behavior of \ebs. Each sequence consists of a mix of LTM interactions and contains events with different QoS types and QoS targets. The ``Full Interaction'' category in \Tbl{tab:app} shows the details of each interaction. On average, each interaction sequence triggers about 94 events and lasts about 43~s.
-
-We acknowledge that there are alternative ways to interact with each application. Thoroughly evaluating all the representative interactions with each application involves a large user study and is beyond the scope of this paper. However, we did perform our due diligence to make sure that the chosen interaction for each application is representative.
 
 \paragraph{Energy Savings} \Fig{fig:energy_results_f} shows the energy consumption of \textit{Interactive} and \ebs's two usage scenarios. The results are normalized to \textit{Perf}, and sorted in the ascending order of \textit{\ebs-I}. As compared to \textit{Interactive}, \ebs achieves on average 29.2\% and 66.0\% energy saving under the imperceptible and usable usage scenarios, respectively.
 
