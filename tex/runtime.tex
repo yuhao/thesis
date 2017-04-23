@@ -1,6 +1,6 @@
 %!TEX root=../paper.tex
 
-\chapter{WebRT: Smart Web Browser Runtime Optimizing for Energy-Efficiency}
+\chapter{WebRT: Energy-Efficient Web Browser Runtime}
 \label{sec:runtime}
 
 Today's mobile processors are becoming extremely heterogeneous. They often combine general-purpose cores that have different performance and energy characteristics~\cite{single-ISA} (e.g., asymmetric chip-multiprocessor architecture) with special-purpose domain-specific cores (e.g., \webcore). While the hardware upheaval promises performance and energy improvements for the mobile Web, current Web runtime systems are not designed to fully exploit the capability of the underlying hardware. The main bottleneck is that current runtime-architecture interface merely exposes the hardware as a monolithic sequential execution model to the runtime system while hiding many architecture-level details. Without having a full visibility of the hardware details, current Web runtimes often lead to energy-inefficient decisions or violate user QoS requirement.
@@ -278,14 +278,13 @@ During application execution, the QoS monitor keeps monitoring event execution t
 \label{sec:runtime:ebs:sched}
 
 \paragraph{Performance Model} We construct performance models for big and little cores separately. Each model predicts the event handler execution latency under different frequencies. We use the classical DVFS analytical model initially proposed in~\cite{dvfs_model}, and employed in subsequent work, such as~\cite{dvfs_power}:
-\begin{align*}
-Execution\,\,\,time = T_{memory} + N_{dependent}/f
-\end{align*}
-where $f$ is the CPU frequency, $T_{memory}$ is the absolute memory access time that does not change with respect to the CPU frequency, and $N_{dependent}$ is the number of CPU cycles that are not overlapped with the memory accesses.
+\begin{equation}\label{eq:dvfs}  Execution time = T_{independent} + N_{nonoverlap}/f
+\end{equation}
+\noindent in which $T$ is the frame latency; $f$ is the CPU frequency; $T_{independent}$ is the time that is independent of $f$, which primarily includes the GPU processing and main memory access time; $N_{nonoverlap}$ is the number of CPU cycles that do not overlap with $T_{independent}$ and scales with $f$.
 
-Strictly speaking, $N_{dependent}$ is a function of $f$. However, precisely constructing a model that varies $N_{dependent}$ with $f$ is complex and introduces a large calibration overhead at runtime. In our experiments, we find that it is feasible and necessary to trade model precision for performance. In particular, we find that treating $N_{dependent}$ as a constant is sufficient in our case.
+Strictly speaking, $N_{independent}$ is a function of $f$. However, precisely constructing a model that varies $N_{independent}$ with $f$ is complex and introduces a large calibration overhead at runtime. In our experiments, we find that it is feasible and necessary to trade model precision for performance. In particular, we find that treating $N_{independent}$ as a constant is sufficient in our case.
 
-Given this simplification, the model constructor builds the model with the event latency under two different frequencies by calculating the value of $T_{memory}$ and $N_{dependent}$. The trade-off in choosing the two frequencies is that on one hand using two sufficiently different frequencies provides higher accuracy, since the execution latencies from closer frequencies are more susceptible to measurement noise. But on the other hand, using two frequencies that are extremely high and low may result in execution falling in the  imperceptible or unusable QoS regions, ultimately wasting energy. In our current implementation, we use the highest and the second-highest frequencies to construct the performance model. We find that the run-to-run variation for the data collected using these two frequencies is low, resulting in a robust model.
+Given this simplification, the model constructor builds the model with the event latency under two different frequencies by calculating the value of $T_{independent}$ and $N_{nonoverlap}$. The trade-off in choosing the two frequencies is that on one hand using two sufficiently different frequencies provides higher accuracy, since the execution latencies from closer frequencies are more susceptible to measurement noise. But on the other hand, using two frequencies that are extremely high and low may result in execution falling in the  imperceptible or unusable QoS regions, ultimately wasting energy. In our current implementation, we use the highest and the second-highest frequencies to construct the performance model. We find that the run-to-run variation for the data collected using these two frequencies is low, resulting in a robust model.
 
 \begin{figure}[t]
   \centering
@@ -296,7 +295,7 @@ Given this simplification, the model constructor builds the model with the event
 
 \paragraph{Frame Latency Tracking} Tracking frame latency is crucial to constructing the performance and energy model. However, accurate frame latency tracking is a nontrivial task, primarily because of the complexities involved in generating a frame in modern Web browsers. Most prior work either is concerned only with the callback latency~\cite{ebs,efetch}, which, as we will show later, contributes to only a portion of frame latency, or it considers logical latency (e.g., the number of conditionals evaluated), which is insufficient to construct the prediction models~\cite{eventbreak}.
 
-Accurately tracking frame latency requires us to understand how a frame is processed internally by a Web browser. Using Google Chrome browser as an example, \Fig{fig:inputs} illustrates a typical frame lifetime, starting from when an input event is received by the browser to when the frame is generated. Although we focus on Chrome, the execution model is generally applicable to almost all modern Web browsers such as Firefox, Safari, Opera, and Internet Explorer.
+Accurately tracking frame latency requires us to understand how a frame is processed internally by a Web browser. Using Google Chrome browser as an example, \Fig{fig:inputs} illustrates a typical frame lifetime, starting from when an input event is received by the browser to when the frame is generated. Although we focus on Chrome, the execution model is generally applicable to almost all modern Web browsers such as Firefox, Safari, Opera, and Edge.
 
 The browser process receives an input event and sends it to the renderer process, which applies five processing stages to produce a frame: callback execution, style resolution, layout, paint, and composite~\cite{renderingpipeline}. In the end, the browser process receives a signal indicating that the frame is produced. To improve performance, the processing stages are spread across two threads, and some portion of the composite stage could be offloaded to GPU (not shown). Note that our performance model in \Equ{eq:dvfs} captures the GPU processing time.
 
